@@ -1,0 +1,14 @@
+version = 2
+
+[profiles.default]
+passes = "lossless"
+zip = { effort = 255 }
+
+[profiles.default.lossy.png-quantize]
+globs = ["**/*.png"]
+
+[profiles.default.lossy.png-alpha]
+globs = ["**/*.png"]
+
+[profiles.default.lossy.ogg-transcode]
+globs = ["**/*.ogg"]
