@@ -2,6 +2,7 @@
 //! the lossless ones then the lossy ones, each group in registry order, through the content cache. Each codec
 //! checks its own output, so a cached output is a checked one.
 
+use std::cmp::Reverse;
 use std::collections::BTreeMap;
 
 use packprune_config::Overrides;
@@ -57,9 +58,13 @@ pub(crate) fn run(
         .filter(|&index| optimisers[index].lossy.is_none())
         .chain((0..optimisers.len()).filter(|&index| optimisers[index].lossy.is_some()))
         .collect();
-    let results: Vec<(PhysPath, Entry, Entry, Vec<Step>)> = pack
-        .files
-        .par_iter()
+    // Largest first, handed out in that order: a large PNG started last would run alone while the other workers
+    // idle. The results are put back in path order, so the output does not depend on the schedule.
+    let mut by_size: Vec<_> = pack.files.iter().collect();
+    by_size.sort_by_key(|(path, entry)| (Reverse(entry.blob.len()), *path));
+    let mut results: Vec<(PhysPath, Entry, Entry, Vec<Step>)> = by_size
+        .into_iter()
+        .par_bridge()
         .map(|(path, entry)| {
             let kind = layout.kinds.get(path).copied().unwrap_or(FileKind::Unknown);
             let cx = FileCx {
@@ -114,6 +119,7 @@ pub(crate) fn run(
             Ok((path.clone(), current, lossless, steps))
         })
         .collect::<Result<_, RunError>>()?;
+    results.sort_unstable_by(|a, b| a.0.cmp(&b.0));
 
     let mut reports: Vec<OptimiserReport> = optimisers
         .iter()
