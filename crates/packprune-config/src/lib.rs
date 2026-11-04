@@ -132,7 +132,7 @@ pub enum PassSelection {
 pub struct Zip {
     #[schemars(schema_with = "schema_types::zip_mode")]
     pub mode: Option<String>,
-    /// 0 stores, 1 to 254 deflate with libdeflate, 255 or `"max"` also tries Zopfli.
+    /// 0 stores, 1 to 254 deflate with libdeflate, 255 or `"max"` also tries Zopfli where libdeflate saves over 1 %.
     #[schemars(schema_with = "schema_types::effort")]
     pub effort: Option<serde_json::Value>,
     pub recompress_compressed: Option<bool>,

@@ -213,7 +213,7 @@ Each pass checks its options at config load with the reader it runs with; `packp
 for `optimise`: entries with identical method, CRC, size and payload share one local record, and local
 headers carry an empty name. The central directory stays complete and exact, which is all
 `java.util.zip.ZipFile`, the client's reader, uses. Effort 0 stores entries, 1-254 uses libdeflate level
-12, and 255 also tries Zopfli, with fewer iterations as the entry grows. The smallest encoding
+12, and 255 also tries Zopfli where libdeflate saves over 1 %, with fewer iterations as the entry grows. The smallest encoding
 wins. ZIP64 entry counts are written, but entry sizes and offsets must stay below 4 GiB. The writer stages `<out>.partial`, syncs it, and renames it.
 
 ## Drop-in mode

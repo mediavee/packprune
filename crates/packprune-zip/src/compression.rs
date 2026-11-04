@@ -11,7 +11,10 @@ pub(crate) fn compress(
         return None;
     }
     let mut best = libdeflate(bytes);
+    // Zopfli improves on a fraction of what libdeflate removes: on already compressed data such as PNG, where
+    // libdeflate saves under 1 %, it costs seconds for a few bytes.
     if options.effort == u8::MAX
+        && best.len() * 100 < bytes.len() * 99
         && let Some(zopfli) = zopfli(bytes)
         && zopfli.len() < best.len()
     {
