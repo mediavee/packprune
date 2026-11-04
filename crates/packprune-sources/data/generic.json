@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "name": "generic",
+  "why": "Keys that name pack ids the same way in every plugin: item components (item_model, tooltip_style, equippable.asset_id, sound events) and text (font). Read against the 26.2 client: DataComponents item_model/tooltip_style/equippable, Style.font. The last rule reads a namespaced id under any other key as an item definition (a plugin naming a generator item as nexo:<id>): quiet, so it shows only where it matches the pack.",
+  "placeholders": ["[{}%<>$]"],
+  "rules": [
+    {"key": "item_model", "kind": "item_definition"},
+    {"key": "tooltip_style", "kind": "tooltip_style"},
+    {"key": "font", "kind": "font"},
+    {"key": "asset_id", "under": "equippable", "kind": "equipment"},
+    {"key": "sound", "kind": "sound_event"},
+    {"key": "sounds", "kind": "sound_event"},
+    {"key": "sound_event", "kind": "sound_event"},
+    {"key": "*_sound", "kind": "sound_event"},
+    {"key": "*", "kind": "item_definition", "namespaced": true, "quiet": true}
+  ]
+}

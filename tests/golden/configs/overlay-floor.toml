@@ -1,0 +1,4 @@
+version = 2
+
+[profiles.default]
+oldest_format = 46

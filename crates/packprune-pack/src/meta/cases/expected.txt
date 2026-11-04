@@ -1,0 +1,985 @@
+case	array_root.mcmeta
+formats	-
+view	-	base	0.0		true
+view	88.0	base@0.0	0.0		false
+view	88.0	base	88.0		true
+case	duplicate_key.mcmeta
+formats	12.0..12.*
+view	-	base	12.0		true
+view	88.0	base	12.0		false
+case	empty.mcmeta
+formats	-
+view	-	base	0.0		true
+view	88.0	base@0.0	0.0		false
+view	88.0	base	88.0		true
+case	filter.mcmeta
+formats	15.0..15.*
+view	-	base	15.0		true
+view	88.0	base	15.0		false
+case	invalid_json.mcmeta
+error
+case	jar_minor_ranges.mcmeta
+formats	87.0..89.3
+overlay	exact	88.0..88.0
+overlay	later	88.1..89.1
+view	-	base	87.0		true
+view	-	exact	88.0	exact	true
+view	-	later	88.1	later	true
+view	88.0	base	87.0		false
+view	88.0	exact	88.0	exact	true
+view	88.0	later	88.1	later	false
+case	jar_split.mcmeta
+formats	80.0..100.*
+overlay	a	84.0..99.*
+view	-	base	80.0		true
+view	-	a	84.0	a	true
+view	88.0	base	80.0		false
+view	88.0	a@84.0	84.0	a	false
+view	88.0	a	88.0	a	true
+case	jar_undeclared.mcmeta
+formats	10.0..20.*
+overlay	a	12.0..14.*
+view	-	base	10.0		true
+view	-	a	12.0	a	true
+view	88.0	base	10.0		false
+view	88.0	a	12.0	a	false
+case	max_int.mcmeta
+formats	2147483647.0..2147483647.*
+view	-	base	2147483647.0		true
+view	88.0	base	2147483647.0		false
+case	max_only.mcmeta
+formats	0.0..88.*
+view	-	base	0.0		true
+view	88.0	base@0.0	0.0		false
+view	88.0	base	88.0		true
+case	min_empty_array.mcmeta
+error
+case	min_max_arrays.mcmeta
+formats	64.2..88.1
+view	-	base	64.2		true
+view	88.0	base@64.2	64.2		false
+view	88.0	base	88.0		true
+case	min_max_int.mcmeta
+formats	64.0..88.*
+view	-	base	64.0		true
+view	88.0	base@64.0	64.0		false
+view	88.0	base	88.0		true
+case	min_null.mcmeta
+error
+case	min_only.mcmeta
+formats	70.0..2147483647.*
+view	-	base	70.0		true
+view	88.0	base@70.0	70.0		false
+view	88.0	base	88.0		true
+case	min_string_items.mcmeta
+formats	64.1..88.*
+view	-	base	64.1		true
+view	88.0	base@64.1	64.1		false
+view	88.0	base	88.0		true
+case	no_range.mcmeta
+formats	-
+view	-	base	0.0		true
+view	88.0	base@0.0	0.0		false
+view	88.0	base	88.0		true
+case	overlay_directory_number.mcmeta
+error
+case	overlay_entries_object.mcmeta
+formats	15.0..15.*
+overlay	a	18.0..20.*
+overlay	b	19.0..19.*
+view	-	base	15.0		true
+view	-	a	18.0	a	true
+view	-	a+b	19.0	a,b	true
+view	88.0	base	15.0		false
+view	88.0	a	18.0	a	false
+view	88.0	a+b	19.0	a,b	false
+case	overlay_no_directory.mcmeta
+error
+case	overlay_no_formats.mcmeta
+error
+case	overlay_pack_format_ignored.mcmeta
+error
+case	overlay_twice.mcmeta
+formats	10.0..30.*
+overlay	a	12.0..20.*
+overlay	b	15.0..25.*
+overlay	a	18.0..22.*
+view	-	base	10.0		true
+view	-	a	12.0	a	true
+view	-	a+b	15.0	a,b	true
+view	-	a+b+a	18.0	a,b,a	true
+view	-	b+a	21.0	b,a	true
+view	-	b	23.0	b	true
+view	88.0	base	10.0		false
+view	88.0	a	12.0	a	false
+view	88.0	a+b	15.0	a,b	false
+view	88.0	a+b+a	18.0	a,b,a	false
+view	88.0	b+a	21.0	b,a	false
+view	88.0	b	23.0	b	false
+case	overlays.mcmeta
+formats	15.0..90.*
+overlay	a	18.0..40.*
+overlay	b	30.0..50.*
+overlay	c	42.1..88.*
+overlay	d	88.0..88.*
+view	-	base	15.0		true
+view	-	a	18.0	a	true
+view	-	a+b	30.0	a,b	true
+view	-	b	41.0	b	true
+view	-	b+c	42.1	b,c	true
+view	-	c	51.0	c	true
+view	-	c+d	88.0	c,d	true
+view	88.0	base	15.0		false
+view	88.0	a	18.0	a	false
+view	88.0	a+b	30.0	a,b	false
+view	88.0	b	41.0	b	false
+view	88.0	b+c	42.1	b,c	false
+view	88.0	c	51.0	c	false
+view	88.0	c+d	88.0	c,d	true
+case	overlays_130.mcmeta
+formats	1.0..130.*
+overlay	o001	1.0..1.*
+overlay	o002	2.0..2.*
+overlay	o003	3.0..3.*
+overlay	o004	4.0..4.*
+overlay	o005	5.0..5.*
+overlay	o006	6.0..6.*
+overlay	o007	7.0..7.*
+overlay	o008	8.0..8.*
+overlay	o009	9.0..9.*
+overlay	o010	10.0..10.*
+overlay	o011	11.0..11.*
+overlay	o012	12.0..12.*
+overlay	o013	13.0..13.*
+overlay	o014	14.0..14.*
+overlay	o015	15.0..15.*
+overlay	o016	16.0..16.*
+overlay	o017	17.0..17.*
+overlay	o018	18.0..18.*
+overlay	o019	19.0..19.*
+overlay	o020	20.0..20.*
+overlay	o021	21.0..21.*
+overlay	o022	22.0..22.*
+overlay	o023	23.0..23.*
+overlay	o024	24.0..24.*
+overlay	o025	25.0..25.*
+overlay	o026	26.0..26.*
+overlay	o027	27.0..27.*
+overlay	o028	28.0..28.*
+overlay	o029	29.0..29.*
+overlay	o030	30.0..30.*
+overlay	o031	31.0..31.*
+overlay	o032	32.0..32.*
+overlay	o033	33.0..33.*
+overlay	o034	34.0..34.*
+overlay	o035	35.0..35.*
+overlay	o036	36.0..36.*
+overlay	o037	37.0..37.*
+overlay	o038	38.0..38.*
+overlay	o039	39.0..39.*
+overlay	o040	40.0..40.*
+overlay	o041	41.0..41.*
+overlay	o042	42.0..42.*
+overlay	o043	43.0..43.*
+overlay	o044	44.0..44.*
+overlay	o045	45.0..45.*
+overlay	o046	46.0..46.*
+overlay	o047	47.0..47.*
+overlay	o048	48.0..48.*
+overlay	o049	49.0..49.*
+overlay	o050	50.0..50.*
+overlay	o051	51.0..51.*
+overlay	o052	52.0..52.*
+overlay	o053	53.0..53.*
+overlay	o054	54.0..54.*
+overlay	o055	55.0..55.*
+overlay	o056	56.0..56.*
+overlay	o057	57.0..57.*
+overlay	o058	58.0..58.*
+overlay	o059	59.0..59.*
+overlay	o060	60.0..60.*
+overlay	o061	61.0..61.*
+overlay	o062	62.0..62.*
+overlay	o063	63.0..63.*
+overlay	o064	64.0..64.*
+overlay	o065	65.0..65.*
+overlay	o066	66.0..66.*
+overlay	o067	67.0..67.*
+overlay	o068	68.0..68.*
+overlay	o069	69.0..69.*
+overlay	o070	70.0..70.*
+overlay	o071	71.0..71.*
+overlay	o072	72.0..72.*
+overlay	o073	73.0..73.*
+overlay	o074	74.0..74.*
+overlay	o075	75.0..75.*
+overlay	o076	76.0..76.*
+overlay	o077	77.0..77.*
+overlay	o078	78.0..78.*
+overlay	o079	79.0..79.*
+overlay	o080	80.0..80.*
+overlay	o081	81.0..81.*
+overlay	o082	82.0..82.*
+overlay	o083	83.0..83.*
+overlay	o084	84.0..84.*
+overlay	o085	85.0..85.*
+overlay	o086	86.0..86.*
+overlay	o087	87.0..87.*
+overlay	o088	88.0..88.*
+overlay	o089	89.0..89.*
+overlay	o090	90.0..90.*
+overlay	o091	91.0..91.*
+overlay	o092	92.0..92.*
+overlay	o093	93.0..93.*
+overlay	o094	94.0..94.*
+overlay	o095	95.0..95.*
+overlay	o096	96.0..96.*
+overlay	o097	97.0..97.*
+overlay	o098	98.0..98.*
+overlay	o099	99.0..99.*
+overlay	o100	100.0..100.*
+overlay	o101	101.0..101.*
+overlay	o102	102.0..102.*
+overlay	o103	103.0..103.*
+overlay	o104	104.0..104.*
+overlay	o105	105.0..105.*
+overlay	o106	106.0..106.*
+overlay	o107	107.0..107.*
+overlay	o108	108.0..108.*
+overlay	o109	109.0..109.*
+overlay	o110	110.0..110.*
+overlay	o111	111.0..111.*
+overlay	o112	112.0..112.*
+overlay	o113	113.0..113.*
+overlay	o114	114.0..114.*
+overlay	o115	115.0..115.*
+overlay	o116	116.0..116.*
+overlay	o117	117.0..117.*
+overlay	o118	118.0..118.*
+overlay	o119	119.0..119.*
+overlay	o120	120.0..120.*
+overlay	o121	121.0..121.*
+overlay	o122	122.0..122.*
+overlay	o123	123.0..123.*
+overlay	o124	124.0..124.*
+overlay	o125	125.0..125.*
+overlay	o126	126.0..126.*
+overlay	o127	127.0..127.*
+overlay	o128	128.0..128.*
+overlay	o129	129.0..129.*
+overlay	o130	130.0..130.*
+view	-	o001	1.0	o001	true
+view	-	o002	2.0	o002	true
+view	-	o003	3.0	o003	true
+view	-	o004	4.0	o004	true
+view	-	o005	5.0	o005	true
+view	-	o006	6.0	o006	true
+view	-	o007	7.0	o007	true
+view	-	o008	8.0	o008	true
+view	-	o009	9.0	o009	true
+view	-	o010	10.0	o010	true
+view	-	o011	11.0	o011	true
+view	-	o012	12.0	o012	true
+view	-	o013	13.0	o013	true
+view	-	o014	14.0	o014	true
+view	-	o015	15.0	o015	true
+view	-	o016	16.0	o016	true
+view	-	o017	17.0	o017	true
+view	-	o018	18.0	o018	true
+view	-	o019	19.0	o019	true
+view	-	o020	20.0	o020	true
+view	-	o021	21.0	o021	true
+view	-	o022	22.0	o022	true
+view	-	o023	23.0	o023	true
+view	-	o024	24.0	o024	true
+view	-	o025	25.0	o025	true
+view	-	o026	26.0	o026	true
+view	-	o027	27.0	o027	true
+view	-	o028	28.0	o028	true
+view	-	o029	29.0	o029	true
+view	-	o030	30.0	o030	true
+view	-	o031	31.0	o031	true
+view	-	o032	32.0	o032	true
+view	-	o033	33.0	o033	true
+view	-	o034	34.0	o034	true
+view	-	o035	35.0	o035	true
+view	-	o036	36.0	o036	true
+view	-	o037	37.0	o037	true
+view	-	o038	38.0	o038	true
+view	-	o039	39.0	o039	true
+view	-	o040	40.0	o040	true
+view	-	o041	41.0	o041	true
+view	-	o042	42.0	o042	true
+view	-	o043	43.0	o043	true
+view	-	o044	44.0	o044	true
+view	-	o045	45.0	o045	true
+view	-	o046	46.0	o046	true
+view	-	o047	47.0	o047	true
+view	-	o048	48.0	o048	true
+view	-	o049	49.0	o049	true
+view	-	o050	50.0	o050	true
+view	-	o051	51.0	o051	true
+view	-	o052	52.0	o052	true
+view	-	o053	53.0	o053	true
+view	-	o054	54.0	o054	true
+view	-	o055	55.0	o055	true
+view	-	o056	56.0	o056	true
+view	-	o057	57.0	o057	true
+view	-	o058	58.0	o058	true
+view	-	o059	59.0	o059	true
+view	-	o060	60.0	o060	true
+view	-	o061	61.0	o061	true
+view	-	o062	62.0	o062	true
+view	-	o063	63.0	o063	true
+view	-	o064	64.0	o064	true
+view	-	o065	65.0	o065	true
+view	-	o066	66.0	o066	true
+view	-	o067	67.0	o067	true
+view	-	o068	68.0	o068	true
+view	-	o069	69.0	o069	true
+view	-	o070	70.0	o070	true
+view	-	o071	71.0	o071	true
+view	-	o072	72.0	o072	true
+view	-	o073	73.0	o073	true
+view	-	o074	74.0	o074	true
+view	-	o075	75.0	o075	true
+view	-	o076	76.0	o076	true
+view	-	o077	77.0	o077	true
+view	-	o078	78.0	o078	true
+view	-	o079	79.0	o079	true
+view	-	o080	80.0	o080	true
+view	-	o081	81.0	o081	true
+view	-	o082	82.0	o082	true
+view	-	o083	83.0	o083	true
+view	-	o084	84.0	o084	true
+view	-	o085	85.0	o085	true
+view	-	o086	86.0	o086	true
+view	-	o087	87.0	o087	true
+view	-	o088	88.0	o088	true
+view	-	o089	89.0	o089	true
+view	-	o090	90.0	o090	true
+view	-	o091	91.0	o091	true
+view	-	o092	92.0	o092	true
+view	-	o093	93.0	o093	true
+view	-	o094	94.0	o094	true
+view	-	o095	95.0	o095	true
+view	-	o096	96.0	o096	true
+view	-	o097	97.0	o097	true
+view	-	o098	98.0	o098	true
+view	-	o099	99.0	o099	true
+view	-	o100	100.0	o100	true
+view	-	o101	101.0	o101	true
+view	-	o102	102.0	o102	true
+view	-	o103	103.0	o103	true
+view	-	o104	104.0	o104	true
+view	-	o105	105.0	o105	true
+view	-	o106	106.0	o106	true
+view	-	o107	107.0	o107	true
+view	-	o108	108.0	o108	true
+view	-	o109	109.0	o109	true
+view	-	o110	110.0	o110	true
+view	-	o111	111.0	o111	true
+view	-	o112	112.0	o112	true
+view	-	o113	113.0	o113	true
+view	-	o114	114.0	o114	true
+view	-	o115	115.0	o115	true
+view	-	o116	116.0	o116	true
+view	-	o117	117.0	o117	true
+view	-	o118	118.0	o118	true
+view	-	o119	119.0	o119	true
+view	-	o120	120.0	o120	true
+view	-	o121	121.0	o121	true
+view	-	o122	122.0	o122	true
+view	-	o123	123.0	o123	true
+view	-	o124	124.0	o124	true
+view	-	o125	125.0	o125	true
+view	-	o126	126.0	o126	true
+view	-	o127	127.0	o127	true
+view	-	o128	128.0	o128	true
+view	-	o129	129.0	o129	true
+view	-	o130	130.0	o130	true
+view	88.0	o001	1.0	o001	false
+view	88.0	o002	2.0	o002	false
+view	88.0	o003	3.0	o003	false
+view	88.0	o004	4.0	o004	false
+view	88.0	o005	5.0	o005	false
+view	88.0	o006	6.0	o006	false
+view	88.0	o007	7.0	o007	false
+view	88.0	o008	8.0	o008	false
+view	88.0	o009	9.0	o009	false
+view	88.0	o010	10.0	o010	false
+view	88.0	o011	11.0	o011	false
+view	88.0	o012	12.0	o012	false
+view	88.0	o013	13.0	o013	false
+view	88.0	o014	14.0	o014	false
+view	88.0	o015	15.0	o015	false
+view	88.0	o016	16.0	o016	false
+view	88.0	o017	17.0	o017	false
+view	88.0	o018	18.0	o018	false
+view	88.0	o019	19.0	o019	false
+view	88.0	o020	20.0	o020	false
+view	88.0	o021	21.0	o021	false
+view	88.0	o022	22.0	o022	false
+view	88.0	o023	23.0	o023	false
+view	88.0	o024	24.0	o024	false
+view	88.0	o025	25.0	o025	false
+view	88.0	o026	26.0	o026	false
+view	88.0	o027	27.0	o027	false
+view	88.0	o028	28.0	o028	false
+view	88.0	o029	29.0	o029	false
+view	88.0	o030	30.0	o030	false
+view	88.0	o031	31.0	o031	false
+view	88.0	o032	32.0	o032	false
+view	88.0	o033	33.0	o033	false
+view	88.0	o034	34.0	o034	false
+view	88.0	o035	35.0	o035	false
+view	88.0	o036	36.0	o036	false
+view	88.0	o037	37.0	o037	false
+view	88.0	o038	38.0	o038	false
+view	88.0	o039	39.0	o039	false
+view	88.0	o040	40.0	o040	false
+view	88.0	o041	41.0	o041	false
+view	88.0	o042	42.0	o042	false
+view	88.0	o043	43.0	o043	false
+view	88.0	o044	44.0	o044	false
+view	88.0	o045	45.0	o045	false
+view	88.0	o046	46.0	o046	false
+view	88.0	o047	47.0	o047	false
+view	88.0	o048	48.0	o048	false
+view	88.0	o049	49.0	o049	false
+view	88.0	o050	50.0	o050	false
+view	88.0	o051	51.0	o051	false
+view	88.0	o052	52.0	o052	false
+view	88.0	o053	53.0	o053	false
+view	88.0	o054	54.0	o054	false
+view	88.0	o055	55.0	o055	false
+view	88.0	o056	56.0	o056	false
+view	88.0	o057	57.0	o057	false
+view	88.0	o058	58.0	o058	false
+view	88.0	o059	59.0	o059	false
+view	88.0	o060	60.0	o060	false
+view	88.0	o061	61.0	o061	false
+view	88.0	o062	62.0	o062	false
+view	88.0	o063	63.0	o063	false
+view	88.0	o064	64.0	o064	false
+view	88.0	o065	65.0	o065	false
+view	88.0	o066	66.0	o066	false
+view	88.0	o067	67.0	o067	false
+view	88.0	o068	68.0	o068	false
+view	88.0	o069	69.0	o069	false
+view	88.0	o070	70.0	o070	false
+view	88.0	o071	71.0	o071	false
+view	88.0	o072	72.0	o072	false
+view	88.0	o073	73.0	o073	false
+view	88.0	o074	74.0	o074	false
+view	88.0	o075	75.0	o075	false
+view	88.0	o076	76.0	o076	false
+view	88.0	o077	77.0	o077	false
+view	88.0	o078	78.0	o078	false
+view	88.0	o079	79.0	o079	false
+view	88.0	o080	80.0	o080	false
+view	88.0	o081	81.0	o081	false
+view	88.0	o082	82.0	o082	false
+view	88.0	o083	83.0	o083	false
+view	88.0	o084	84.0	o084	false
+view	88.0	o085	85.0	o085	false
+view	88.0	o086	86.0	o086	false
+view	88.0	o087	87.0	o087	false
+view	88.0	o088	88.0	o088	true
+view	88.0	o089	89.0	o089	false
+view	88.0	o090	90.0	o090	false
+view	88.0	o091	91.0	o091	false
+view	88.0	o092	92.0	o092	false
+view	88.0	o093	93.0	o093	false
+view	88.0	o094	94.0	o094	false
+view	88.0	o095	95.0	o095	false
+view	88.0	o096	96.0	o096	false
+view	88.0	o097	97.0	o097	false
+view	88.0	o098	98.0	o098	false
+view	88.0	o099	99.0	o099	false
+view	88.0	o100	100.0	o100	false
+view	88.0	o101	101.0	o101	false
+view	88.0	o102	102.0	o102	false
+view	88.0	o103	103.0	o103	false
+view	88.0	o104	104.0	o104	false
+view	88.0	o105	105.0	o105	false
+view	88.0	o106	106.0	o106	false
+view	88.0	o107	107.0	o107	false
+view	88.0	o108	108.0	o108	false
+view	88.0	o109	109.0	o109	false
+view	88.0	o110	110.0	o110	false
+view	88.0	o111	111.0	o111	false
+view	88.0	o112	112.0	o112	false
+view	88.0	o113	113.0	o113	false
+view	88.0	o114	114.0	o114	false
+view	88.0	o115	115.0	o115	false
+view	88.0	o116	116.0	o116	false
+view	88.0	o117	117.0	o117	false
+view	88.0	o118	118.0	o118	false
+view	88.0	o119	119.0	o119	false
+view	88.0	o120	120.0	o120	false
+view	88.0	o121	121.0	o121	false
+view	88.0	o122	122.0	o122	false
+view	88.0	o123	123.0	o123	false
+view	88.0	o124	124.0	o124	false
+view	88.0	o125	125.0	o125	false
+view	88.0	o126	126.0	o126	false
+view	88.0	o127	127.0	o127	false
+view	88.0	o128	128.0	o128	false
+view	88.0	o129	129.0	o129	false
+view	88.0	o130	130.0	o130	false
+case	overlays_130_disjoint.mcmeta
+formats	1.0..1.*
+overlay	m000	100.0..100.0
+overlay	m001	100.1..100.1
+overlay	m002	100.2..100.2
+overlay	m003	100.3..100.3
+overlay	m004	100.4..100.4
+overlay	m005	100.5..100.5
+overlay	m006	100.6..100.6
+overlay	m007	100.7..100.7
+overlay	m008	100.8..100.8
+overlay	m009	100.9..100.9
+overlay	m010	100.10..100.10
+overlay	m011	100.11..100.11
+overlay	m012	100.12..100.12
+overlay	m013	100.13..100.13
+overlay	m014	100.14..100.14
+overlay	m015	100.15..100.15
+overlay	m016	100.16..100.16
+overlay	m017	100.17..100.17
+overlay	m018	100.18..100.18
+overlay	m019	100.19..100.19
+overlay	m020	100.20..100.20
+overlay	m021	100.21..100.21
+overlay	m022	100.22..100.22
+overlay	m023	100.23..100.23
+overlay	m024	100.24..100.24
+overlay	m025	100.25..100.25
+overlay	m026	100.26..100.26
+overlay	m027	100.27..100.27
+overlay	m028	100.28..100.28
+overlay	m029	100.29..100.29
+overlay	m030	100.30..100.30
+overlay	m031	100.31..100.31
+overlay	m032	100.32..100.32
+overlay	m033	100.33..100.33
+overlay	m034	100.34..100.34
+overlay	m035	100.35..100.35
+overlay	m036	100.36..100.36
+overlay	m037	100.37..100.37
+overlay	m038	100.38..100.38
+overlay	m039	100.39..100.39
+overlay	m040	100.40..100.40
+overlay	m041	100.41..100.41
+overlay	m042	100.42..100.42
+overlay	m043	100.43..100.43
+overlay	m044	100.44..100.44
+overlay	m045	100.45..100.45
+overlay	m046	100.46..100.46
+overlay	m047	100.47..100.47
+overlay	m048	100.48..100.48
+overlay	m049	100.49..100.49
+overlay	m050	100.50..100.50
+overlay	m051	100.51..100.51
+overlay	m052	100.52..100.52
+overlay	m053	100.53..100.53
+overlay	m054	100.54..100.54
+overlay	m055	100.55..100.55
+overlay	m056	100.56..100.56
+overlay	m057	100.57..100.57
+overlay	m058	100.58..100.58
+overlay	m059	100.59..100.59
+overlay	m060	100.60..100.60
+overlay	m061	100.61..100.61
+overlay	m062	100.62..100.62
+overlay	m063	100.63..100.63
+overlay	m064	100.64..100.64
+overlay	m065	100.65..100.65
+overlay	m066	100.66..100.66
+overlay	m067	100.67..100.67
+overlay	m068	100.68..100.68
+overlay	m069	100.69..100.69
+overlay	m070	100.70..100.70
+overlay	m071	100.71..100.71
+overlay	m072	100.72..100.72
+overlay	m073	100.73..100.73
+overlay	m074	100.74..100.74
+overlay	m075	100.75..100.75
+overlay	m076	100.76..100.76
+overlay	m077	100.77..100.77
+overlay	m078	100.78..100.78
+overlay	m079	100.79..100.79
+overlay	m080	100.80..100.80
+overlay	m081	100.81..100.81
+overlay	m082	100.82..100.82
+overlay	m083	100.83..100.83
+overlay	m084	100.84..100.84
+overlay	m085	100.85..100.85
+overlay	m086	100.86..100.86
+overlay	m087	100.87..100.87
+overlay	m088	100.88..100.88
+overlay	m089	100.89..100.89
+overlay	m090	100.90..100.90
+overlay	m091	100.91..100.91
+overlay	m092	100.92..100.92
+overlay	m093	100.93..100.93
+overlay	m094	100.94..100.94
+overlay	m095	100.95..100.95
+overlay	m096	100.96..100.96
+overlay	m097	100.97..100.97
+overlay	m098	100.98..100.98
+overlay	m099	100.99..100.99
+overlay	m100	100.100..100.100
+overlay	m101	100.101..100.101
+overlay	m102	100.102..100.102
+overlay	m103	100.103..100.103
+overlay	m104	100.104..100.104
+overlay	m105	100.105..100.105
+overlay	m106	100.106..100.106
+overlay	m107	100.107..100.107
+overlay	m108	100.108..100.108
+overlay	m109	100.109..100.109
+overlay	m110	100.110..100.110
+overlay	m111	100.111..100.111
+overlay	m112	100.112..100.112
+overlay	m113	100.113..100.113
+overlay	m114	100.114..100.114
+overlay	m115	100.115..100.115
+overlay	m116	100.116..100.116
+overlay	m117	100.117..100.117
+overlay	m118	100.118..100.118
+overlay	m119	100.119..100.119
+overlay	m120	100.120..100.120
+overlay	m121	100.121..100.121
+overlay	m122	100.122..100.122
+overlay	m123	100.123..100.123
+overlay	m124	100.124..100.124
+overlay	m125	100.125..100.125
+overlay	m126	100.126..100.126
+overlay	m127	100.127..100.127
+overlay	m128	100.128..100.128
+overlay	m129	100.129..100.129
+view	-	base	1.0		true
+view	-	m000	100.0	m000	true
+view	-	m001	100.1	m001	true
+view	-	m002	100.2	m002	true
+view	-	m003	100.3	m003	true
+view	-	m004	100.4	m004	true
+view	-	m005	100.5	m005	true
+view	-	m006	100.6	m006	true
+view	-	m007	100.7	m007	true
+view	-	m008	100.8	m008	true
+view	-	m009	100.9	m009	true
+view	-	m010	100.10	m010	true
+view	-	m011	100.11	m011	true
+view	-	m012	100.12	m012	true
+view	-	m013	100.13	m013	true
+view	-	m014	100.14	m014	true
+view	-	m015	100.15	m015	true
+view	-	m016	100.16	m016	true
+view	-	m017	100.17	m017	true
+view	-	m018	100.18	m018	true
+view	-	m019	100.19	m019	true
+view	-	m020	100.20	m020	true
+view	-	m021	100.21	m021	true
+view	-	m022	100.22	m022	true
+view	-	m023	100.23	m023	true
+view	-	m024	100.24	m024	true
+view	-	m025	100.25	m025	true
+view	-	m026	100.26	m026	true
+view	-	m027	100.27	m027	true
+view	-	m028	100.28	m028	true
+view	-	m029	100.29	m029	true
+view	-	m030	100.30	m030	true
+view	-	m031	100.31	m031	true
+view	-	m032	100.32	m032	true
+view	-	m033	100.33	m033	true
+view	-	m034	100.34	m034	true
+view	-	m035	100.35	m035	true
+view	-	m036	100.36	m036	true
+view	-	m037	100.37	m037	true
+view	-	m038	100.38	m038	true
+view	-	m039	100.39	m039	true
+view	-	m040	100.40	m040	true
+view	-	m041	100.41	m041	true
+view	-	m042	100.42	m042	true
+view	-	m043	100.43	m043	true
+view	-	m044	100.44	m044	true
+view	-	m045	100.45	m045	true
+view	-	m046	100.46	m046	true
+view	-	m047	100.47	m047	true
+view	-	m048	100.48	m048	true
+view	-	m049	100.49	m049	true
+view	-	m050	100.50	m050	true
+view	-	m051	100.51	m051	true
+view	-	m052	100.52	m052	true
+view	-	m053	100.53	m053	true
+view	-	m054	100.54	m054	true
+view	-	m055	100.55	m055	true
+view	-	m056	100.56	m056	true
+view	-	m057	100.57	m057	true
+view	-	m058	100.58	m058	true
+view	-	m059	100.59	m059	true
+view	-	m060	100.60	m060	true
+view	-	m061	100.61	m061	true
+view	-	m062	100.62	m062	true
+view	-	m063	100.63	m063	true
+view	-	m064	100.64	m064	true
+view	-	m065	100.65	m065	true
+view	-	m066	100.66	m066	true
+view	-	m067	100.67	m067	true
+view	-	m068	100.68	m068	true
+view	-	m069	100.69	m069	true
+view	-	m070	100.70	m070	true
+view	-	m071	100.71	m071	true
+view	-	m072	100.72	m072	true
+view	-	m073	100.73	m073	true
+view	-	m074	100.74	m074	true
+view	-	m075	100.75	m075	true
+view	-	m076	100.76	m076	true
+view	-	m077	100.77	m077	true
+view	-	m078	100.78	m078	true
+view	-	m079	100.79	m079	true
+view	-	m080	100.80	m080	true
+view	-	m081	100.81	m081	true
+view	-	m082	100.82	m082	true
+view	-	m083	100.83	m083	true
+view	-	m084	100.84	m084	true
+view	-	m085	100.85	m085	true
+view	-	m086	100.86	m086	true
+view	-	m087	100.87	m087	true
+view	-	m088	100.88	m088	true
+view	-	m089	100.89	m089	true
+view	-	m090	100.90	m090	true
+view	-	m091	100.91	m091	true
+view	-	m092	100.92	m092	true
+view	-	m093	100.93	m093	true
+view	-	m094	100.94	m094	true
+view	-	m095	100.95	m095	true
+view	-	m096	100.96	m096	true
+view	-	m097	100.97	m097	true
+view	-	m098	100.98	m098	true
+view	-	m099	100.99	m099	true
+view	-	m100	100.100	m100	true
+view	-	m101	100.101	m101	true
+view	-	m102	100.102	m102	true
+view	-	m103	100.103	m103	true
+view	-	m104	100.104	m104	true
+view	-	m105	100.105	m105	true
+view	-	m106	100.106	m106	true
+view	-	m107	100.107	m107	true
+view	-	m108	100.108	m108	true
+view	-	m109	100.109	m109	true
+view	-	m110	100.110	m110	true
+view	-	m111	100.111	m111	true
+view	-	m112	100.112	m112	true
+view	-	m113	100.113	m113	true
+view	-	m114	100.114	m114	true
+view	-	m115	100.115	m115	true
+view	-	m116	100.116	m116	true
+view	-	m117	100.117	m117	true
+view	-	m118	100.118	m118	true
+view	-	m119	100.119	m119	true
+view	-	m120	100.120	m120	true
+view	-	m121	100.121	m121	true
+view	-	m122	100.122	m122	true
+view	-	m123	100.123	m123	true
+view	-	m124	100.124	m124	true
+view	-	m125	100.125	m125	true
+view	-	m126	100.126	m126	true
+view	-	m127	100.127	m127	true
+view	-	m128	100.128	m128	true
+view	-	m129	100.129	m129	true
+view	88.0	base	1.0		false
+view	88.0	m000	100.0	m000	false
+view	88.0	m001	100.1	m001	false
+view	88.0	m002	100.2	m002	false
+view	88.0	m003	100.3	m003	false
+view	88.0	m004	100.4	m004	false
+view	88.0	m005	100.5	m005	false
+view	88.0	m006	100.6	m006	false
+view	88.0	m007	100.7	m007	false
+view	88.0	m008	100.8	m008	false
+view	88.0	m009	100.9	m009	false
+view	88.0	m010	100.10	m010	false
+view	88.0	m011	100.11	m011	false
+view	88.0	m012	100.12	m012	false
+view	88.0	m013	100.13	m013	false
+view	88.0	m014	100.14	m014	false
+view	88.0	m015	100.15	m015	false
+view	88.0	m016	100.16	m016	false
+view	88.0	m017	100.17	m017	false
+view	88.0	m018	100.18	m018	false
+view	88.0	m019	100.19	m019	false
+view	88.0	m020	100.20	m020	false
+view	88.0	m021	100.21	m021	false
+view	88.0	m022	100.22	m022	false
+view	88.0	m023	100.23	m023	false
+view	88.0	m024	100.24	m024	false
+view	88.0	m025	100.25	m025	false
+view	88.0	m026	100.26	m026	false
+view	88.0	m027	100.27	m027	false
+view	88.0	m028	100.28	m028	false
+view	88.0	m029	100.29	m029	false
+view	88.0	m030	100.30	m030	false
+view	88.0	m031	100.31	m031	false
+view	88.0	m032	100.32	m032	false
+view	88.0	m033	100.33	m033	false
+view	88.0	m034	100.34	m034	false
+view	88.0	m035	100.35	m035	false
+view	88.0	m036	100.36	m036	false
+view	88.0	m037	100.37	m037	false
+view	88.0	m038	100.38	m038	false
+view	88.0	m039	100.39	m039	false
+view	88.0	m040	100.40	m040	false
+view	88.0	m041	100.41	m041	false
+view	88.0	m042	100.42	m042	false
+view	88.0	m043	100.43	m043	false
+view	88.0	m044	100.44	m044	false
+view	88.0	m045	100.45	m045	false
+view	88.0	m046	100.46	m046	false
+view	88.0	m047	100.47	m047	false
+view	88.0	m048	100.48	m048	false
+view	88.0	m049	100.49	m049	false
+view	88.0	m050	100.50	m050	false
+view	88.0	m051	100.51	m051	false
+view	88.0	m052	100.52	m052	false
+view	88.0	m053	100.53	m053	false
+view	88.0	m054	100.54	m054	false
+view	88.0	m055	100.55	m055	false
+view	88.0	m056	100.56	m056	false
+view	88.0	m057	100.57	m057	false
+view	88.0	m058	100.58	m058	false
+view	88.0	m059	100.59	m059	false
+view	88.0	m060	100.60	m060	false
+view	88.0	m061	100.61	m061	false
+view	88.0	m062	100.62	m062	false
+view	88.0	m063	100.63	m063	false
+view	88.0	m064	100.64	m064	false
+view	88.0	m065	100.65	m065	false
+view	88.0	m066	100.66	m066	false
+view	88.0	m067	100.67	m067	false
+view	88.0	m068	100.68	m068	false
+view	88.0	m069	100.69	m069	false
+view	88.0	m070	100.70	m070	false
+view	88.0	m071	100.71	m071	false
+view	88.0	m072	100.72	m072	false
+view	88.0	m073	100.73	m073	false
+view	88.0	m074	100.74	m074	false
+view	88.0	m075	100.75	m075	false
+view	88.0	m076	100.76	m076	false
+view	88.0	m077	100.77	m077	false
+view	88.0	m078	100.78	m078	false
+view	88.0	m079	100.79	m079	false
+view	88.0	m080	100.80	m080	false
+view	88.0	m081	100.81	m081	false
+view	88.0	m082	100.82	m082	false
+view	88.0	m083	100.83	m083	false
+view	88.0	m084	100.84	m084	false
+view	88.0	m085	100.85	m085	false
+view	88.0	m086	100.86	m086	false
+view	88.0	m087	100.87	m087	false
+view	88.0	m088	100.88	m088	false
+view	88.0	m089	100.89	m089	false
+view	88.0	m090	100.90	m090	false
+view	88.0	m091	100.91	m091	false
+view	88.0	m092	100.92	m092	false
+view	88.0	m093	100.93	m093	false
+view	88.0	m094	100.94	m094	false
+view	88.0	m095	100.95	m095	false
+view	88.0	m096	100.96	m096	false
+view	88.0	m097	100.97	m097	false
+view	88.0	m098	100.98	m098	false
+view	88.0	m099	100.99	m099	false
+view	88.0	m100	100.100	m100	false
+view	88.0	m101	100.101	m101	false
+view	88.0	m102	100.102	m102	false
+view	88.0	m103	100.103	m103	false
+view	88.0	m104	100.104	m104	false
+view	88.0	m105	100.105	m105	false
+view	88.0	m106	100.106	m106	false
+view	88.0	m107	100.107	m107	false
+view	88.0	m108	100.108	m108	false
+view	88.0	m109	100.109	m109	false
+view	88.0	m110	100.110	m110	false
+view	88.0	m111	100.111	m111	false
+view	88.0	m112	100.112	m112	false
+view	88.0	m113	100.113	m113	false
+view	88.0	m114	100.114	m114	false
+view	88.0	m115	100.115	m115	false
+view	88.0	m116	100.116	m116	false
+view	88.0	m117	100.117	m117	false
+view	88.0	m118	100.118	m118	false
+view	88.0	m119	100.119	m119	false
+view	88.0	m120	100.120	m120	false
+view	88.0	m121	100.121	m121	false
+view	88.0	m122	100.122	m122	false
+view	88.0	m123	100.123	m123	false
+view	88.0	m124	100.124	m124	false
+view	88.0	m125	100.125	m125	false
+view	88.0	m126	100.126	m126	false
+view	88.0	m127	100.127	m127	false
+view	88.0	m128	100.128	m128	false
+view	88.0	m129	100.129	m129	false
+case	overlays_only.mcmeta
+formats	-
+overlay	a	10.0..20.*
+overlay	b	15.0..30.*
+view	-	a	10.0	a	true
+view	-	a+b	15.0	a,b	true
+view	-	b	21.0	b	true
+view	88.0	a	10.0	a	false
+view	88.0	a+b	15.0	a,b	false
+view	88.0	b	21.0	b	false
+case	pack_format.mcmeta
+formats	15.0..15.*
+view	-	base	15.0		true
+view	88.0	base	15.0		false
+case	pack_format_big.mcmeta
+error
+case	pack_format_bool.mcmeta
+error
+case	pack_format_float.mcmeta
+formats	15.0..15.*
+view	-	base	15.0		true
+view	88.0	base	15.0		false
+case	pack_format_null.mcmeta
+formats	0.0..0.*
+view	-	base	0.0		true
+view	88.0	base	0.0		false
+case	pack_format_string.mcmeta
+formats	15.0..15.*
+view	-	base	15.0		true
+view	88.0	base	15.0		false
+case	supported_array.mcmeta
+formats	15.0..34.*
+view	-	base	15.0		true
+view	88.0	base	15.0		false
+case	supported_array_3.mcmeta
+error
+case	supported_float.mcmeta
+error
+case	supported_int.mcmeta
+formats	18.0..18.*
+view	-	base	18.0		true
+view	88.0	base	18.0		false
+case	supported_inverted.mcmeta
+formats	77.0..34.*
+case	supported_object.mcmeta
+formats	16.0..22.*
+view	-	base	16.0		true
+view	88.0	base	16.0		false
+case	supported_object_partial.mcmeta
+formats	0.0..22.*
+view	-	base	0.0		true
+view	88.0	base	0.0		false
+case	supported_string.mcmeta
+error
+case	two_roots.mcmeta
+error
+case	zero.mcmeta
+formats	0.0..0.*
+overlay	z	0.0..0.*
+view	-	z	0.0	z	true
+view	88.0	z	0.0	z	false

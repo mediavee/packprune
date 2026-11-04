@@ -1,0 +1,1 @@
+{"parent": "viki:tab/root", "criteria": {"x": {"trigger": "minecraft:impossible"}}, "display": {"icon": {"id": "minecraft:map"}, "title": {"text": "no background"}, "description": {"text": "D"}}}

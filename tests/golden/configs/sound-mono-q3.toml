@@ -1,0 +1,5 @@
+version = 2
+
+[profiles.default.lossy.sound-mono]
+globs = ["**"]
+quality = 3.0

@@ -1,0 +1,9 @@
+tpl_base:
+  Pack:
+    model: <model>
+    parent_model: fx:item/blade
+
+tpl_user:
+  template: tpl_base
+  Pack:
+    texture: fx:item/tpl_user

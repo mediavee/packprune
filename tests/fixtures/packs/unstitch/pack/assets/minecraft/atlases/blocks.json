@@ -1,0 +1,1 @@
+{"sources": [{"type": "minecraft:unstitch", "resource": "fx:sheet/tiles", "divisor_x": 2, "divisor_y": 1, "regions": [{"sprite": "fx:block/tile_a", "x": 0, "y": 0, "width": 1, "height": 1}, {"sprite": "fx:block/tile_b", "x": 1, "y": 0, "width": 1, "height": 1}]}]}

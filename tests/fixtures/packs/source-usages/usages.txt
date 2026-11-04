@@ -1,0 +1,9 @@
+tooltip_style fx:fancy
+sprite fx:icon/coin minecraft:gui
+tooltip_style fx:gone
+sprite fx:icon/coin minecraft:particles
+model minecraft:item/generated
+sprite minecraft:block/stone
+sprite minecraft:hud/hotbar minecraft:gui
+model minecraft:item/*
+sprite fx:icon/c?in minecraft:gui

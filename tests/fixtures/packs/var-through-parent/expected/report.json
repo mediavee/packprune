@@ -1,0 +1,103 @@
+{
+  "schema": 4,
+  "tool": {
+    "name": "packprune",
+    "version": "test"
+  },
+  "inputs": {
+    "pack": {
+      "name": "pack",
+      "sha256": "a6d1a2452c16858e83606d1e2d9707fa526166609764e1a4b2d6dbd6d7b921a0"
+    },
+    "clientJar": {
+      "name": "client.jar",
+      "sha256": "8320c4a70697c8a5f963c54722b822a17e5e38b5761f50738c2f1f6495ac8839"
+    },
+    "clientVersion": "26.2",
+    "clientRules": "26.2",
+    "assetIndex": {
+      "name": "none",
+      "sha256": ""
+    }
+  },
+  "views": [
+    {
+      "id": "base",
+      "format": "88.0",
+      "overlays": [ ],
+      "verified": true
+    }
+  ],
+  "summary": {
+    "files": 5,
+    "bytes": 360,
+    "reached": 5,
+    "orphans": 0,
+    "orphanBytes": 0,
+    "atlasLoadedOrphans": 0,
+    "atlasLoadedOrphanBytes": 0,
+    "unused": 0,
+    "unusedBytes": 0,
+    "deadBlockstates": 0,
+    "missing": 0,
+    "notStitched": 0,
+    "otherFormatsMissing": 0,
+    "otherFormatsNotStitched": 0,
+    "unknown": 0,
+    "invalid": 0,
+    "unmatchedUsages": 0
+  },
+  "byKind": [
+    {
+      "kind": "pack_meta",
+      "files": 1,
+      "bytes": 73,
+      "reached": 1,
+      "unreached": 0,
+      "unreachedBytes": 0
+    },
+    {
+      "kind": "item_definition",
+      "files": 1,
+      "bytes": 65,
+      "reached": 1,
+      "unreached": 0,
+      "unreachedBytes": 0
+    },
+    {
+      "kind": "model",
+      "files": 2,
+      "bytes": 219,
+      "reached": 2,
+      "unreached": 0,
+      "unreachedBytes": 0
+    },
+    {
+      "kind": "texture",
+      "files": 1,
+      "bytes": 3,
+      "reached": 1,
+      "unreached": 0,
+      "unreachedBytes": 0
+    }
+  ],
+  "orphans": [ ],
+  "atlasLoadedOrphans": [ ],
+  "deadBlockstates": [ ],
+  "removable": [ ],
+  "missing": [ ],
+  "notStitched": [ ],
+  "otherFormats": {
+    "missing": [ ],
+    "notStitched": [ ]
+  },
+  "unknown": [ ],
+  "invalid": [ ],
+  "sources": [ ],
+  "sourceRoots": [ ],
+  "unusedItems": [ ],
+  "warnings": [
+    "no asset index: minecraft: sound files and events the pack does not define are assumed vanilla, and every file under minecraft:sounds/ is kept",
+    "no source reads data packs or item components: textures only they name (entity variants, camera overlays, trims, banners) look like orphans here; keep-list them"
+  ]
+}

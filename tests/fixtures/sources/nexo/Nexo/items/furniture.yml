@@ -1,0 +1,23 @@
+oak_chair:
+  itemname: <glyph:coin> Oak chair
+  Components:
+    item_model: fx:furniture/oak_chair
+    tooltip_style: fx:fancy
+  Mechanics:
+    furniture:
+      item_model: fx:furniture/oak_chair_placed
+      block_sounds:
+        place_sound: fx:chair.place
+        break_sound: block.wood.break
+      storage:
+        open_sound: minecraft:block.chest.open
+
+ore_block:
+  Pack:
+    texture: fx:block/ore
+  Mechanics:
+    custom_block:
+      type: NOTEBLOCK
+      model: fx:block/ore
+      block_sounds:
+        step_sound: fx:ore.step

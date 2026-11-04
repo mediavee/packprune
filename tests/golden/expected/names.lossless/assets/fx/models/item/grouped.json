@@ -1,0 +1,1 @@
+{"textures":{"a":"fx:g/one","b":"fx:g/two"},"elements":[{"from":[0,0,0],"to":[16,16,16],"faces":{"north":{"texture":"#a"},"south":{"texture":"#b"}}}]}

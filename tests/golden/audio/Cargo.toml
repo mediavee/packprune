@@ -1,0 +1,15 @@
+[package]
+name = "golden-audio"
+description = "Compares the decoded sounds of two packs for the golden tests (../README.md)"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+# Not a member of the repo's workspace: the gate's crates stay those of crates/*; this one only reads them.
+[workspace]
+
+[dependencies]
+camino = "=1.2.6"
+packprune-codec = { path = "../../../crates/packprune-codec" }
+packprune-pack = { path = "../../../crates/packprune-pack" }
+packprune-zip = { path = "../../../crates/packprune-zip" }

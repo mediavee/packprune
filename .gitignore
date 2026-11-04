@@ -1,0 +1,7 @@
+.DS_Store
+/reports/
+/target/
+/fuzz/target/
+/fuzz/corpus/
+/fuzz/artifacts/
+.packprune-cache/

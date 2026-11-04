@@ -1,0 +1,4 @@
+font | viki:dialog_font |  | input!data/viki/dialog/menu.json title.font | 
+sprite | minecraft:item/gem | minecraft:items | input!data/viki/dialog/menu.json body[0].contents.extra[0].sprite | 
+sprite | viki:icons/coin | viki:gui | input!data/viki/dialog/menu.json body[0].contents.extra[1].sprite | 
+font | minecraft:uniform |  | input!data/viki/dialog/menu.json action.label.font | 

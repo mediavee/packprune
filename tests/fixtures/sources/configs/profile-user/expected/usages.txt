@@ -1,0 +1,5 @@
+item_definition | nexo:other_generic |  | Other/menu.yml:2 item-model | 
+item_definition | nexo:gem |  | Shops/menu.yml:2 entries[0].material | 
+sprite | minecraft:icons/ruby | minecraft:gui | Shops/menu.yml:3 entries[0].display.icon | 
+item_definition | @@later |  | Shops/menu.yml:5 entries[2].material | unresolvable: placeholder
+item_definition | nexo:generic_still_works |  | Shops/menu.yml:7 entries[4].item-model | 

@@ -1,0 +1,128 @@
+{
+  "schema": 4,
+  "tool": {
+    "name": "packprune",
+    "version": "test"
+  },
+  "inputs": {
+    "pack": {
+      "name": "pack",
+      "sha256": "46e299eb6cd3180b1aecdb7758ff943242e2d4acfa7fd9c5a923d2071b42d80e"
+    },
+    "clientJar": {
+      "name": "client.jar",
+      "sha256": "8320c4a70697c8a5f963c54722b822a17e5e38b5761f50738c2f1f6495ac8839"
+    },
+    "clientVersion": "26.2",
+    "clientRules": "26.2",
+    "assetIndex": {
+      "name": "none",
+      "sha256": ""
+    }
+  },
+  "views": [
+    {
+      "id": "base",
+      "format": "88.0",
+      "overlays": [ ],
+      "verified": true
+    }
+  ],
+  "summary": {
+    "files": 5,
+    "bytes": 124,
+    "reached": 1,
+    "orphans": 1,
+    "orphanBytes": 3,
+    "atlasLoadedOrphans": 3,
+    "atlasLoadedOrphanBytes": 48,
+    "unused": 0,
+    "unusedBytes": 0,
+    "deadBlockstates": 0,
+    "missing": 0,
+    "notStitched": 0,
+    "otherFormatsMissing": 0,
+    "otherFormatsNotStitched": 0,
+    "unknown": 0,
+    "invalid": 0,
+    "unmatchedUsages": 0
+  },
+  "byKind": [
+    {
+      "kind": "pack_meta",
+      "files": 1,
+      "bytes": 73,
+      "reached": 1,
+      "unreached": 0,
+      "unreachedBytes": 0
+    },
+    {
+      "kind": "texture",
+      "files": 3,
+      "bytes": 9,
+      "reached": 0,
+      "unreached": 3,
+      "unreachedBytes": 9
+    },
+    {
+      "kind": "texture_meta",
+      "files": 1,
+      "bytes": 42,
+      "reached": 0,
+      "unreached": 1,
+      "unreachedBytes": 42
+    }
+  ],
+  "orphans": [
+    {
+      "path": "assets/fx/textures/misc/loose.png",
+      "kind": "texture",
+      "bytes": 3
+    }
+  ],
+  "atlasLoadedOrphans": [
+    {
+      "path": "assets/fx/textures/gui/sprites/icon/unused.png",
+      "kind": "texture",
+      "bytes": 3,
+      "atlases": [
+        "minecraft:gui"
+      ]
+    },
+    {
+      "path": "assets/fx/textures/gui/sprites/icon/unused.png.mcmeta",
+      "kind": "texture_meta",
+      "bytes": 42,
+      "atlases": [
+        "minecraft:gui"
+      ]
+    },
+    {
+      "path": "assets/fx/textures/item/unused.png",
+      "kind": "texture",
+      "bytes": 3,
+      "atlases": [
+        "minecraft:items"
+      ]
+    }
+  ],
+  "deadBlockstates": [ ],
+  "removable": [
+    "assets/fx/textures/misc/loose.png"
+  ],
+  "missing": [ ],
+  "notStitched": [ ],
+  "otherFormats": {
+    "missing": [ ],
+    "notStitched": [ ]
+  },
+  "unknown": [ ],
+  "invalid": [ ],
+  "sources": [ ],
+  "sourceRoots": [ ],
+  "unusedItems": [ ],
+  "warnings": [
+    "no asset index: minecraft: sound files and events the pack does not define are assumed vanilla, and every file under minecraft:sounds/ is kept",
+    "no source reads data packs or item components: textures only they name (entity variants, camera overlays, trims, banners) look like orphans here; keep-list them"
+  ]
+}

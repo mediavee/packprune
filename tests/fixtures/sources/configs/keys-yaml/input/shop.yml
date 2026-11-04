@@ -1,0 +1,29 @@
+# every key family of the generic vocabulary, in YAML
+menu:
+  items:
+    - item-model: "nexo:gem"
+      tooltip-style: minecraft:rare
+      equippable: { slot: head, asset-id: "viki:ruby" }
+    - ItemModel: nexo:camel
+  hud:
+    font: viki:hud
+  sounds:
+    click-sound: ui.click
+    open_sound: "viki:ui.open"
+    sound: { sound: weather.rain, volume: 0.5 }
+    sound_event: viki:event
+extra:
+  sounds: [viki:a, "viki:b"]
+other:
+  asset_id: viki:not_equipment
+  font: 5
+  enabled: true
+  sound: ENTITY_ARROW_HIT_PLAYER
+  item-model: ""
+  tooltip_style: Not An Id
+anchored: &base
+  item-model: nexo:anchor
+copy:
+  <<: *base
+---
+item_model: nexo:second_document

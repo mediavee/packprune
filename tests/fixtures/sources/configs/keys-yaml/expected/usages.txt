@@ -1,0 +1,15 @@
+item_definition | nexo:gem |  | shop.yml:4 menu.items[0].item-model | 
+tooltip_style | minecraft:rare |  | shop.yml:5 menu.items[0].tooltip-style | 
+equipment | viki:ruby |  | shop.yml:6 menu.items[0].equippable.asset-id | 
+item_definition | nexo:camel |  | shop.yml:7 menu.items[1].ItemModel | 
+font | viki:hud |  | shop.yml:9 menu.hud.font | 
+sound_event | minecraft:ui.click |  | shop.yml:11 menu.sounds.click-sound | 
+sound_event | viki:ui.open |  | shop.yml:12 menu.sounds.open_sound | 
+sound_event | minecraft:weather.rain |  | shop.yml:13 menu.sounds.sound.sound | 
+sound_event | viki:event |  | shop.yml:14 menu.sounds.sound_event | 
+sound_event | viki:a |  | shop.yml:16 extra.sounds[0] | 
+sound_event | viki:b |  | shop.yml:16 extra.sounds[1] | 
+item_definition | viki:not_equipment |  | shop.yml:18 other.asset_id |  | quiet
+item_definition | nexo:anchor |  | shop.yml:25 anchored.item-model | 
+item_definition | nexo:anchor |  | shop.yml:25 copy.<<.item-model | 
+item_definition | nexo:second_document |  | shop.yml:29 item_model | 

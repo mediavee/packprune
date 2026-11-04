@@ -1,0 +1,17 @@
+Fancy Name:
+  Pack:
+    texture: fx:item/fancy
+
+handmade:
+  ItemModel:
+    type: model
+  Pack:
+    bbmodel: fx:model/robot
+
+uppercase_ref:
+  Pack:
+    texture: FX:Item/Upper
+    unknown_key: ignored
+
+no_pack_no_claim:
+  material: STICK

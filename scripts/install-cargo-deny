@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+version=0.20.2
+arch=$(uname -m)
+case "$arch" in
+    x86_64) sum=9f12ed4c49936e09b48bf862b595cde2fe64fcbd9d74dfacac6131ca824c8d5f ;;
+    aarch64) sum=995c82be0defc7a025cae49a2aa2644ce8245c9a3318fc4103907c6a285e8c7d ;;
+    *) echo "Unsupported cargo-deny architecture: $arch" >&2; exit 1 ;;
+esac
+name=cargo-deny-$version-$arch-unknown-linux-musl
+archive=$(mktemp "${RUNNER_TEMP:-${TMPDIR:-/tmp}}/cargo-deny.XXXXXX")
+trap 'rm -- "$archive"' EXIT
+curl -fsSLo "$archive" "https://github.com/EmbarkStudios/cargo-deny/releases/download/$version/$name.tar.gz"
+echo "$sum  $archive" | sha256sum -c -
+install_dir=${CARGO_HOME:-$HOME/.cargo}/bin
+mkdir -p "$install_dir"
+tar xzf "$archive" -C "$install_dir" --strip-components=1 "$name/cargo-deny"

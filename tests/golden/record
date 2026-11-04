@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+# Runs packprune on every row (or the rows matching the patterns) and records its outputs as the expected ones:
+# expected/<row>/ is the output zip extracted. A row that names a pass is recorded only when that pass changes a
+# file, so that it tests something. PACKPRUNE_BIN replaces the workspace build.
+#
+#   tests/golden/record [<row pattern>...]       e.g. 'models.*' or sounds.sound-mono
+set -o pipefail
+cd "$(dirname "$0")"
+. ./lib.sh
+
+packprune_binary || exit 3
+work=$(mktemp -d "${TMPDIR:-/tmp}/packprune-record.XXXXXX")
+trap 'rm -rf "$work"' EXIT
+client=$work/client.jar
+client_jar "$client" || exit 3
+
+failed=0
+while IFS=$'\t' read -r -u 3 row pack configuration analysis; do
+    dir=$work/$row
+    mkdir -p "$dir"
+    set -f
+    args=($analysis)
+    set +f
+    run "$bin" "$client" "$pack" "$configuration" "$dir/out.zip" "$dir" ${args[@]+"${args[@]}"}
+    code=$?
+    if [ $code -ne 0 ] || [ ! -f "$dir/out.zip" ]; then
+        printf '%-36s FAILED: packprune exited %s\n' "$row" "$code"
+        sed 's/^/    /' "$dir/run.log"
+        failed=1
+        continue
+    fi
+    # The pass a configuration names: `--passes <pass>`, or the lossy pass or floor its config sets.
+    pass=$(options "$configuration" | paste -sd' ' - | perl -ne '
+        if (/--passes (?!none\b)(\S+)/) { print $1 }
+        elsif (/--config (\S+)/) {
+            open my $c, "<", $1 or die "$1: $!"; local $/; my $config = <$c>;
+            print $config =~ /\.lossy\.([\w-]+)\]/ ? $1 : $config =~ /^oldest_format\b/m ? "overlay-floor" : "";
+        }')
+    if [ -n "$pass" ] && ! grep "^pass $pass " "$dir/run.log" | grep -qv ': 0 files changed'; then
+        printf '%-36s FAILED: the fixture does not exercise %s\n' "$row" "$pass"
+        grep "^pass $pass " "$dir/run.log" | sed 's/^/    /'
+        failed=1
+        continue
+    fi
+    rm -rf "expected/$row"
+    extract "$dir/out.zip" "expected/$row"
+    printf '%-36s recorded\n' "$row"
+done 3< <(rows rows "$@")
+exit $failed

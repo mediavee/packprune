@@ -1,0 +1,7 @@
+reached ov_88/assets/fx/items/new.json
+reached ov_88/assets/fx/models/item/new.json
+reached assets/fx/textures/item/new.png
+reached assets/fx/models/item/shadowed.json
+reached ov_88/assets/fx/models/item/shadowed.json
+reached assets/fx/textures/item/old.png
+unknown undeclared/assets/fx/models/item/stray.json

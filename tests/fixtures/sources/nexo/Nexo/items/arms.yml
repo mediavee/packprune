@@ -1,0 +1,38 @@
+ruby_sword:
+  material: DIAMOND_SWORD
+  Pack:
+    model: fx:item/ruby_sword.json
+    parent_model: fx:item/blade
+    custom_model_data: 1001
+    composite_models:
+      - fx:item/ruby_glow
+
+iron_bow:
+  material: BOW
+  Pack:
+    texture:
+      - fx:item/iron_bow.png
+      - fx:item/iron_bow_layer
+    pulling_textures:
+      - fx:item/iron_bow_0
+      - fx:item/iron_bow_1
+    damaged_models:
+      - fx:item/iron_bow_worn
+
+oak_shield:
+  material: SHIELD
+  Pack:
+    texture: fx:item/oak_shield
+    blocking_model: fx:item/oak_shield_blocking
+
+crystal_staff:
+  Pack:
+    parent_model: fx:block/frame
+    textures:
+      layer0: fx:item/staff
+      particle: fx:item/staff_particle
+    dyeable_texture: fx:item/staff_dye
+
+bare_item:
+  Pack:
+    custom_model_data: 7

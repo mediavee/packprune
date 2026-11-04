@@ -1,0 +1,5 @@
+root vanilla_path assets/minecraft/models/item/paper.json
+reached assets/fx/models/item/ruby.json
+reached assets/fx/textures/item/ruby.png
+root unverified_format_vanilla assets/minecraft/textures/models/armor/ruby_layer_1.png
+other_missing assets/fx/models/item/absent.json

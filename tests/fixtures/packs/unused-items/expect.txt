@@ -1,0 +1,19 @@
+reached assets/fx/items/kept.json
+reached assets/fx/models/item/kept.json
+reached assets/fx/models/item/shared.json
+reached assets/fx/textures/item/kept.png
+unused assets/fx/items/dropped.json
+unused assets/fx/models/item/dropped.json
+unused assets/fx/textures/item/dropped.png
+unused assets/fx/textures/item/dropped_icon.png
+reached assets/fx/textures/custom/single.png
+unused assets/fx/items/twin_a.json
+unused assets/fx/items/twin_b.json
+unused assets/fx/models/item/twin.json
+unused assets/fx/textures/item/twin.png
+root item_definition assets/fx/items/plain.json
+reached assets/fx/models/item/plain.json
+reached assets/fx/items/other.json
+atlas_loaded_orphan assets/fx/textures/item/loose.png
+warning No world, player or database data is read
+reached assets/fx/items/claimed.json

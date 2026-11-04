@@ -1,0 +1,7 @@
+entries:
+  - material: gem
+    display: { icon: ruby }
+  - material: "ge*"
+  - material: "@@later"
+  - icon: not_under_display
+  - item-model: nexo:generic_still_works

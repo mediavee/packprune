@@ -1,0 +1,214 @@
+{
+  "schema": 4,
+  "tool": {
+    "name": "packprune",
+    "version": "test"
+  },
+  "inputs": {
+    "pack": {
+      "name": "pack",
+      "sha256": "397a68cb5b436e8884a47423b5b2578453e5a8390d939818e7f23ff38ba591a3"
+    },
+    "clientJar": {
+      "name": "client.jar",
+      "sha256": "8320c4a70697c8a5f963c54722b822a17e5e38b5761f50738c2f1f6495ac8839"
+    },
+    "clientVersion": "26.2",
+    "clientRules": "26.2",
+    "assetIndex": {
+      "name": "none",
+      "sha256": ""
+    }
+  },
+  "views": [
+    {
+      "id": "older_c+everywhere",
+      "format": "30.0",
+      "overlays": [
+        "older_c",
+        "everywhere"
+      ],
+      "verified": false
+    },
+    {
+      "id": "old_a+everywhere",
+      "format": "42.0",
+      "overlays": [
+        "old_a",
+        "everywhere"
+      ],
+      "verified": false
+    },
+    {
+      "id": "everywhere",
+      "format": "84.0",
+      "overlays": [
+        "everywhere"
+      ],
+      "verified": false
+    },
+    {
+      "id": "everywhere+new_b",
+      "format": "88.0",
+      "overlays": [
+        "everywhere",
+        "new_b"
+      ],
+      "verified": true
+    },
+    {
+      "id": "everywhere+new_b@89.0",
+      "format": "89.0",
+      "overlays": [
+        "everywhere",
+        "new_b"
+      ],
+      "verified": false
+    }
+  ],
+  "summary": {
+    "files": 26,
+    "bytes": 1566,
+    "reached": 23,
+    "orphans": 2,
+    "orphanBytes": 50,
+    "atlasLoadedOrphans": 0,
+    "atlasLoadedOrphanBytes": 0,
+    "unused": 0,
+    "unusedBytes": 0,
+    "deadBlockstates": 1,
+    "missing": 1,
+    "notStitched": 0,
+    "otherFormatsMissing": 1,
+    "otherFormatsNotStitched": 0,
+    "unknown": 0,
+    "invalid": 0,
+    "unmatchedUsages": 0
+  },
+  "byKind": [
+    {
+      "kind": "pack_meta",
+      "files": 1,
+      "bytes": 388,
+      "reached": 1,
+      "unreached": 0,
+      "unreachedBytes": 0
+    },
+    {
+      "kind": "item_definition",
+      "files": 6,
+      "bytes": 419,
+      "reached": 6,
+      "unreached": 0,
+      "unreachedBytes": 0
+    },
+    {
+      "kind": "model",
+      "files": 5,
+      "bytes": 241,
+      "reached": 5,
+      "unreached": 0,
+      "unreachedBytes": 0
+    },
+    {
+      "kind": "texture",
+      "files": 4,
+      "bytes": 12,
+      "reached": 3,
+      "unreached": 1,
+      "unreachedBytes": 3
+    },
+    {
+      "kind": "blockstate",
+      "files": 6,
+      "bytes": 282,
+      "reached": 4,
+      "unreached": 2,
+      "unreachedBytes": 94
+    },
+    {
+      "kind": "atlas",
+      "files": 1,
+      "bytes": 74,
+      "reached": 1,
+      "unreached": 0,
+      "unreachedBytes": 0
+    },
+    {
+      "kind": "shader",
+      "files": 1,
+      "bytes": 30,
+      "reached": 1,
+      "unreached": 0,
+      "unreachedBytes": 0
+    },
+    {
+      "kind": "shader_include",
+      "files": 2,
+      "bytes": 120,
+      "reached": 2,
+      "unreached": 0,
+      "unreachedBytes": 0
+    }
+  ],
+  "orphans": [
+    {
+      "path": "assets/fx/textures/legacy/unused.png",
+      "kind": "texture",
+      "bytes": 3
+    },
+    {
+      "path": "assets/minecraft/blockstates/stone.json",
+      "kind": "blockstate",
+      "bytes": 47
+    }
+  ],
+  "atlasLoadedOrphans": [ ],
+  "deadBlockstates": [
+    {
+      "path": "assets/fx/blockstates/custom.json",
+      "kind": "blockstate",
+      "bytes": 47
+    }
+  ],
+  "removable": [
+    "assets/fx/blockstates/custom.json",
+    "assets/fx/textures/legacy/unused.png",
+    "assets/minecraft/blockstates/stone.json"
+  ],
+  "missing": [
+    {
+      "source": "new_b/assets/fx/items/broken.json",
+      "target": "assets/fx/models/item/absent_new.json",
+      "reason": "item.model",
+      "views": [
+        "88.0",
+        "89.0"
+      ]
+    }
+  ],
+  "notStitched": [ ],
+  "otherFormats": {
+    "missing": [
+      {
+        "source": "old_a/assets/fx/items/legacy.json",
+        "target": "assets/fx/models/item/absent_legacy.json",
+        "reason": "item.model",
+        "views": [
+          "42.0"
+        ]
+      }
+    ],
+    "notStitched": [ ]
+  },
+  "unknown": [ ],
+  "invalid": [ ],
+  "sources": [ ],
+  "sourceRoots": [ ],
+  "unusedItems": [ ],
+  "warnings": [
+    "no asset index: minecraft: sound files and events the pack does not define are assumed vanilla, and every file under minecraft:sounds/ is kept",
+    "no source reads data packs or item components: textures only they name (entity variants, camera overlays, trims, banners) look like orphans here; keep-list them",
+    "views at formats 30.0, 42.0, 84.0, 89.0 cannot be checked against the vanilla of client 26.2 (format 88.0): their minecraft: files and shaders are kept, and their findings are listed under Other formats, unverified"
+  ]
+}

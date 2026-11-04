@@ -1,0 +1,1 @@
+{"textures": {"w": "fx:item/wrap"}, "elements": [{"from": [0, 0, 0], "to": [16, 16, 16], "faces": {"north": {"uv": [0, 0, 4, 4], "texture": "#w"}}}]}

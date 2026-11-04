@@ -1,0 +1,19 @@
+[package]
+name = "packprune-oracle"
+description = "Equivalence oracle: view resolver, digests, compare, located differences"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+packprune-pack.workspace = true
+packprune-graph.workspace = true
+packprune-codec.workspace = true
+blake3.workspace = true
+rayon.workspace = true
+regex.workspace = true
+
+[lints]
+workspace = true

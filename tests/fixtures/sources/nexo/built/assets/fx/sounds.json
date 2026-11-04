@@ -1,0 +1,1 @@
+{"ui.click": {"sounds": ["fx:3f2a"]}, "ambient.wind": {"sounds": ["fx:9c1b", "fx:77de"]}, "ui.alias": {"sounds": [{"type": "event", "name": "fx:ui.click"}]}, "chair.place": {"sounds": ["fx:3f2a"]}}

@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+# The determinism proof: each pack optimised with `--threads 1` and `--threads 8`, each cold on its own empty cache
+# then warm on it. Every run must succeed and write its zip, and the four zips must be byte-identical: a refusal,
+# however repeatable, proves nothing about the output.
+#
+#   scripts/determinism                         every fixture pack, over the fixtures' client
+#   scripts/determinism <pack> <optimise args>  one pack, e.g. with --client-jar, --asset-index, --source
+#
+# PROFILE=release builds the binary in release (a real pack); the default is the dev profile.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+profile=${PROFILE:-dev}
+cargo build --quiet --locked --profile "$profile" -p packprune-cli
+target=${CARGO_TARGET_DIR:-target}
+bin="$target/$([ "$profile" = dev ] && echo debug || echo "$profile")/packprune"
+
+work=$(mktemp -d "${TMPDIR:-/tmp}/packprune-determinism.XXXXXX")
+trap 'rm -rf "$work"' EXIT
+mkdir "$work/home"
+
+if [ $# -gt 0 ]; then
+    packs=("$1")
+    shift
+    args=("$@")
+else
+    # The fixtures' client, zipped into a client jar (tests/golden/lib.sh does the same).
+    jar="$work/client.jar"
+    (cd tests/fixtures/vanilla && perl -MIO::Compress::Zip=zip,\$ZipError -MFile::Find -e '
+        my @files;
+        find({ wanted => sub { push @files, $File::Find::name =~ s{^\./}{}r if -f }, no_chdir => 1 }, ".");
+        zip([ sort @files ] => $ARGV[0]) or die $ZipError;
+    ' "$jar")
+    packs=(tests/fixtures/packs/*/pack)
+    args=(--client-jar "$jar")
+fi
+
+failed=0
+for pack in "${packs[@]}"; do
+    name=$(basename "$pack")
+    [ "$name" = pack ] && name=$(basename "$(dirname "$pack")")
+    results=()
+    for run in cold-1 cold-8 warm-1 warm-8; do
+        threads=${run#*-}
+        out="$work/$name-$run.zip"
+        code=0
+        HOME="$work/home" PACKPRUNE_CACHE="$work/cache-$name-$threads" \
+            "$bin" -q optimise "$pack" -o "$out" --threads "$threads" "${args[@]}" \
+            > "$work/$name-$run.log" 2>&1 || code=$?
+        sha1=none
+        [ -f "$out" ] && sha1=$(perl -MDigest::SHA=sha1_hex -e 'local $/; open my $f, "<:raw", $ARGV[0] or die; print sha1_hex(<$f>)' "$out")
+        results+=("exit $code sha1 $sha1")
+    done
+    if printf '%s\n' "${results[@]}" | grep -qv '^exit 0 sha1 [0-9a-f]'; then
+        printf '%-28s FAILED: every run must exit 0 and write its zip\n' "$name"
+        paste <(printf '    %s\n' cold-1 cold-8 warm-1 warm-8) <(printf '%s\n' "${results[@]}")
+        sed 's/^/    /' "$work/$name-cold-1.log" >&2
+        failed=1
+    elif [ "$(printf '%s\n' "${results[@]}" | sort -u | wc -l)" -eq 1 ]; then
+        printf '%-28s %s (4 runs)\n' "$name" "${results[0]}"
+    else
+        printf '%-28s DIFFERS\n' "$name"
+        paste <(printf '    %s\n' cold-1 cold-8 warm-1 warm-8) <(printf '%s\n' "${results[@]}")
+        failed=1
+    fi
+done
+exit "$failed"

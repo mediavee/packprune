@@ -1,0 +1,16 @@
+coin:
+  texture: fx:font/coin.png
+  font: fx:hud
+  char: "A"
+  height: 8
+  ascent: 7
+heart:
+  texture: fx:font/heart
+  char: "B"
+  height: 8
+  ascent: 7
+spin:
+  gif: fx:font/spin
+  char: "C"
+alias:
+  reference: coin

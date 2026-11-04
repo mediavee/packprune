@@ -1,0 +1,5 @@
+reached assets/fx/textures/entity/chest/crate.png
+reached assets/fx/textures/entity/shulker/crate_box.png
+reached assets/fx/textures/entity/head/skull.png
+reached assets/fx/textures/entity/statue.png
+atlas_loaded_orphan assets/fx/textures/entity/chest/unused.png

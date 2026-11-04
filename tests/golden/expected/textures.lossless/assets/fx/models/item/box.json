@@ -1,0 +1,1 @@
+{"textures":{"s1":"fx:item/s1","s2":"fx:item/s1","s3":"fx:item/s3","anim":"fx:item/anim","blend":"fx:item/blend"},"elements":[{"from":[0,0,0],"to":[16,16,16],"faces":{"down":{"texture":"#s1"},"up":{"texture":"#s2"},"north":{"texture":"#s3"},"south":{"texture":"#anim"},"west":{"texture":"#blend"},"east":{"texture":"#s1"}}}]}

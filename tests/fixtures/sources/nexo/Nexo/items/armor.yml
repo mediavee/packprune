@@ -1,0 +1,16 @@
+ruby_helmet:
+  material: LEATHER_HELMET
+  Pack:
+    texture: fx:item/ruby_helmet
+  Components:
+    equippable:
+      slot: HEAD
+      asset_id: nexo:ruby
+      camera_overlay: fx:misc/ruby_blur
+      equip_sound: fx:ruby.equip
+  CustomArmor:
+    id: Ruby
+    layer1: fx:armor/ruby_1
+    layer2: fx:armor/ruby_2.png
+    elytra: fx:armor/ruby_wings
+    unknown_layer: fx:armor/ignored

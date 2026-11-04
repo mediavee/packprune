@@ -1,0 +1,6 @@
+settings:
+  generate_sounds: true
+
+sounds:
+  - id: fx:ui.click
+    sound: fx:ui/click.ogg

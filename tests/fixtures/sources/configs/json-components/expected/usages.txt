@@ -1,0 +1,6 @@
+font | viki:title |  | lines.yml:1 title json.font | JSON text component
+font | viki:extra |  | lines.yml:1 title json.extra[0].font | JSON text component
+sprite | minecraft:item/gem | minecraft:items | lines.yml:1 title json.extra[1].sprite | JSON text component
+sprite | minecraft:block/stone | minecraft:blocks | lines.yml:1 title json.extra[2].sprite | JSON text component
+font | viki:inlist |  | lines.yml:2 list json[0].font | JSON text component
+font | {font} |  | lines.yml:4 placeholder json.font | unresolvable: placeholder

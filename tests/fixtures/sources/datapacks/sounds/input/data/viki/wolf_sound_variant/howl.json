@@ -1,0 +1,4 @@
+{
+  "adult_sounds": {"ambient_sound": "viki:wolf.a", "death_sound": "viki:wolf.d", "growl_sound": "viki:wolf.g", "hurt_sound": "viki:wolf.h", "pant_sound": "viki:wolf.p", "whine_sound": "viki:wolf.w", "step_sound": "viki:wolf.s"},
+  "baby_sounds": {"ambient_sound": "viki:pup.a", "death_sound": "viki:pup.d", "growl_sound": "viki:pup.g", "hurt_sound": "viki:pup.h", "pant_sound": "viki:pup.p", "whine_sound": "viki:pup.w", "step_sound": "viki:pup.s"}
+}

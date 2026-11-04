@@ -1,0 +1,99 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  # The Rust gate, in the toolchain's container image.
+  gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    container:
+      # Same version as rust-toolchain.toml; the first step fails when they drift.
+      image: rust:1.99.1-trixie
+      volumes:
+        - packprune-ci-registry:/usr/local/cargo/registry
+        - packprune-ci-target:/cache/target
+    env:
+      CARGO_TARGET_DIR: /cache/target
+      CARGO_TERM_COLOR: always
+    steps:
+      - run: chown -R "$(stat -c %u:%g "$RUNNER_TEMP")" "$GITHUB_WORKSPACE"
+      - uses: actions/checkout@v7
+      - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      - name: Toolchain
+        run: |
+          grep -qx "channel = \"$(rustc --version | cut -d' ' -f2)\"" rust-toolchain.toml
+          rustup component add rustfmt clippy
+      - name: cargo-deny
+        run: scripts/install-cargo-deny
+      - run: scripts/check
+      - if: ${{ always() }}
+        run: chown -R "$(stat -c %u:%g "$RUNNER_TEMP")" "$GITHUB_WORKSPACE"
+
+  # Main only: the fuzz smoke and the determinism proof.
+  fuzz-smoke:
+    if: ${{ github.event_name == 'push' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    container:
+      image: rust:1.99.1-trixie
+      volumes:
+        - packprune-ci-registry:/usr/local/cargo/registry
+        - packprune-ci-target:/cache/target
+    env:
+      CARGO_TARGET_DIR: /cache/target
+      CARGO_TERM_COLOR: always
+    steps:
+      - run: chown -R "$(stat -c %u:%g "$RUNNER_TEMP")" "$GITHUB_WORKSPACE"
+      - uses: actions/checkout@v7
+      - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      - run: scripts/fuzz-smoke
+      - if: ${{ always() }}
+        run: chown -R "$(stat -c %u:%g "$RUNNER_TEMP")" "$GITHUB_WORKSPACE"
+
+  determinism:
+    if: ${{ github.event_name == 'push' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    container:
+      image: rust:1.99.1-trixie
+      volumes:
+        - packprune-ci-registry:/usr/local/cargo/registry
+        - packprune-ci-target:/cache/target
+    env:
+      CARGO_TARGET_DIR: /cache/target
+      CARGO_TERM_COLOR: always
+    steps:
+      - run: chown -R "$(stat -c %u:%g "$RUNNER_TEMP")" "$GITHUB_WORKSPACE"
+      - uses: actions/checkout@v7
+      - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      - run: scripts/determinism
+      - if: ${{ always() }}
+        run: chown -R "$(stat -c %u:%g "$RUNNER_TEMP")" "$GITHUB_WORKSPACE"
+
+  # The only required check: branch rules name it, so jobs can change freely. The main-only jobs count
+  # when they ran; on a pull request they are skipped by design.
+  ci-ok:
+    if: ${{ !cancelled() }}
+    needs: [gate, fuzz-smoke, determinism]
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - env:
+          GATE: ${{ needs.gate.result }}
+          FUZZ: ${{ needs.fuzz-smoke.result }}
+          DETERMINISM: ${{ needs.determinism.result }}
+          EVENT: ${{ github.event_name }}
+        run: |
+          main_only() { [ "$1" = success ] || { [ "$1" = skipped ] && [ "$EVENT" = pull_request ]; }; }
+          [ "$GATE" = success ] && main_only "$FUZZ" && main_only "$DETERMINISM"

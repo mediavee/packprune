@@ -1,0 +1,84 @@
+[workspace]
+resolver = "3"
+members = ["crates/*"]
+exclude = ["vendor/optivorbis", "vendor/saphyr-parser"]
+
+[workspace.package]
+version = "2.0.0-dev"
+edition = "2024"
+rust-version = "1.99"
+license = "GPL-3.0-or-later"
+publish = false
+
+# Exact pins: output bytes depend on codec versions. Member crates take them with `workspace = true`.
+[workspace.dependencies]
+packprune-cache = { path = "crates/packprune-cache" }
+packprune-codec = { path = "crates/packprune-codec" }
+packprune-config = { path = "crates/packprune-config" }
+packprune-engine = { path = "crates/packprune-engine" }
+packprune-graph = { path = "crates/packprune-graph" }
+packprune-oracle = { path = "crates/packprune-oracle" }
+packprune-pack = { path = "crates/packprune-pack" }
+packprune-pass = { path = "crates/packprune-pass" }
+packprune-passes = { path = "crates/packprune-passes" }
+packprune-report = { path = "crates/packprune-report" }
+packprune-sources = { path = "crates/packprune-sources" }
+packprune-zip = { path = "crates/packprune-zip" }
+
+blake3 = "=1.8.7"
+camino = "=1.2.6"
+clap = { version = "=4.6.7", features = ["derive"] }
+crc32fast = "=1.5.3"
+flate2 = { version = "=1.1.10", default-features = false, features = ["zlib-rs"] }
+globset = "=0.4.21"
+imagequant = "=4.4.1"
+libc = "=0.2.191"
+libdeflater = "=1.26.1"
+memmap2 = "=0.9.12"
+ogg = "=0.9.2"
+optivorbis = { version = "=0.3.2", path = "vendor/optivorbis" }
+oxipng = { version = "=10.2.1", default-features = false, features = ["parallel", "zopfli"] }
+png = "=0.18.1"
+rayon = "=1.12.0"
+regex = "=1.13.1"
+rubato = "=5.0.1"
+rustfft = "=6.4.1"
+saphyr-parser = { version = "=0.3.3", path = "vendor/saphyr-parser" }
+schemars = "=1.2.3"
+serde = { version = "=1.0.229", features = ["derive"] }
+serde_json = { version = "=1.0.154", features = ["float_roundtrip"] }
+sha1 = "=0.11.0"
+sha2 = "=0.11.1"
+smallvec = "=1.16.4"
+symphonia = { version = "=0.6.1", default-features = false, features = ["vorbis", "ogg", "mp3", "flac", "wav", "pcm", "aac", "isomp4"] }
+tempfile = "=3.27.0"
+thiserror = "=2.0.21"
+toml = "=1.1.8"
+toml_edit = "=0.25.17"
+tracing = "=0.1.44"
+tracing-subscriber = { version = "=0.3.23", features = ["env-filter"] }
+# Without `stream-serial-rng`, the caller picks stream serials, keeping output deterministic.
+vorbis_rs = { version = "=0.5.6", default-features = false }
+zip = { version = "=9.1.3", default-features = false, features = ["deflate-flate2-zlib-rs"] }
+zopfli = "=0.8.4"
+
+[workspace.lints.rust]
+unsafe_op_in_unsafe_fn = "warn"
+rust_2018_idioms = { level = "warn", priority = -1 }
+
+[workspace.lints.clippy]
+# Panics carry a reason: `expect("why")` over `unwrap()`; suppressions say why and expire.
+unwrap_used = "warn"
+allow_attributes = "warn"
+allow_attributes_without_reason = "warn"
+undocumented_unsafe_blocks = "warn"
+clone_on_ref_ptr = "warn"
+redundant_clone = "warn"
+rc_buffer = "warn"
+string_add = "warn"
+wildcard_imports = "warn"
+dbg_macro = "warn"
+todo = "warn"
+
+[profile.release]
+panic = "unwind"

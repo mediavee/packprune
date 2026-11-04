@@ -1,0 +1,97 @@
+#!/usr/bin/env bash
+# packprune on every row (or the rows matching the patterns), its output compared with the recorded one in
+# expected/<row>/ by the oracle (`packprune diff`) and by the files each holds. A row passes when the oracle finds no
+# difference and both hold the same files; a `transcode` row's sounds must also decode within audio-tolerances.
+# JOBS rows run at once (4). PACKPRUNE_BIN and GOLDEN_AUDIO_BIN replace the workspace builds.
+#
+#   tests/golden/check [<row pattern>...]       e.g. 'models.*' or sounds.sound-mono
+set -o pipefail
+cd "$(dirname "$0")"
+. ./lib.sh
+
+# One row, run by the loop below: its result line in $work/<row>.line, what failed in $work/<row>.err. The line is
+# renamed into place last, so a worker that dies leaves no line and the row counts as failed.
+check_row() {
+    local row pack configuration analysis
+    IFS=$'\t' read -r row pack configuration analysis <<< "$1"
+    local dir=$work/$row
+    mkdir -p "$dir"
+    exec > "$work/$row.part" 2> "$work/$row.err"
+    local result=ok
+    if [ ! -d "expected/$row" ]; then
+        result="FAILED: no expected output (./record $row)"
+    else
+        local code oracle_options
+        set -f
+        args=($analysis)
+        oracle_options=($(asset_index_option $analysis))
+        set +f
+        run "$bin" "$client" "$pack" "$configuration" "$dir/out.zip" "$dir" ${args[@]+"${args[@]}"}
+        code=$?
+        if [ $code -ne 0 ] || [ ! -f "$dir/out.zip" ]; then
+            result="FAILED: packprune exited $code"
+            sed "s/^/$row: /" "$dir/run.log" >&2
+        else
+            oracle "$bin" "expected/$row" "$dir/out.zip" "$dir/diff.log" "$configuration" \
+                --client-jar "$client" ${oracle_options[@]+"${oracle_options[@]}"} > "$dir/differs"
+            code=$?
+            if [ $code -gt 1 ]; then
+                result="FAILED: the oracle exited $code"
+                sed "s/^/$row: /" "$dir/diff.log" >&2
+            elif [ -s "$dir/differs" ]; then
+                result="FAILED: $(grep -c . "$dir/differs") differences for the player"
+                sed "s/^/$row: /" "$dir/differs" >&2
+            elif entries_diff "expected/$row" "$dir/out.zip" > "$dir/entries" && [ -s "$dir/entries" ]; then
+                result="FAILED: $(grep -c . "$dir/entries") files differ"
+                sed "s/^/$row: /" "$dir/entries" >&2
+            elif is_transcode "$configuration"; then
+                if audio_check "$audio" "expected/$row" "$dir/out.zip" "$pack" "$dir/audio.log"; then
+                    result="ok, sounds within tolerance"
+                else
+                    result='FAILED: sounds outside tolerance'
+                    sed "s/^/$row: /" "$dir/audio.log" >&2
+                fi
+            fi
+        fi
+    fi
+    printf '%-36s %s\n' "$row" "$result"
+    mv "$work/$row.part" "$work/$row.line"
+}
+
+if [ "${1:-}" = --row ]; then
+    check_row "$2"
+    exit
+fi
+
+packprune_binary && audio_binary || exit 3
+export work
+work=$(mktemp -d "${TMPDIR:-/tmp}/packprune-golden.XXXXXX")
+trap 'rm -rf "$work"' EXIT
+export client=$work/client.jar
+client_jar "$client" || exit 3
+
+rows rows "$@" > "$work/rows" || exit 3
+if [ ! -s "$work/rows" ]; then
+    echo "no row matches: $*" >&2
+    exit 2
+fi
+workers=0
+tr '\n' '\0' < "$work/rows" | xargs -0 -n1 -P "${JOBS:-4}" ./check --row || {
+    workers=$?
+    echo "a row worker failed (xargs exited $workers)" >&2
+}
+total=0 failed=0
+while IFS=$'\t' read -r row _; do
+    total=$((total + 1))
+    [ -f "$work/$row.err" ] && cat "$work/$row.err" >&2
+    # A complete result is this row's one line; anything else is a worker that did not finish.
+    if [ "$(grep -c . "$work/$row.line" 2>/dev/null)" != 1 ] || ! grep -q "^$row " "$work/$row.line"; then
+        printf '%-36s FAILED: no complete result\n' "$row"
+        failed=$((failed + 1))
+        continue
+    fi
+    cat "$work/$row.line"
+    grep -q ' FAILED' "$work/$row.line" && failed=$((failed + 1))
+done < "$work/rows"
+echo "$((total - failed)) of $total rows passed"
+[ "$failed" -eq 0 ] && [ "$workers" -eq 0 ]

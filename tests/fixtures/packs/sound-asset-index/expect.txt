@@ -1,0 +1,4 @@
+reached assets/minecraft/sounds/ambient/cave/cave1.ogg
+orphan assets/minecraft/sounds/custom/unused.ogg
+missing assets/minecraft/sounds/ambient/cave/cavee1.ogg
+missing minecraft:block.stone.brake

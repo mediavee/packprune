@@ -1,0 +1,3 @@
+{"parent": "minecraft:item/generated", "overrides": [
+  {"predicate": {"custom_model_data": 1}, "model": "fx:item/ruby"},
+  {"predicate": {"custom_model_data": 2}, "model": "fx:item/absent"}]}

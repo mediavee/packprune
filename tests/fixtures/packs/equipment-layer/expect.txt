@@ -1,0 +1,3 @@
+reached assets/fx/textures/entity/equipment/humanoid/steel.png
+reached assets/fx/textures/entity/equipment/wings/steel_wings.png
+orphan assets/fx/textures/entity/equipment/humanoid_leggings/steel.png

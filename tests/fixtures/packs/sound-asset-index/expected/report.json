@@ -1,0 +1,119 @@
+{
+  "schema": 4,
+  "tool": {
+    "name": "packprune",
+    "version": "test"
+  },
+  "inputs": {
+    "pack": {
+      "name": "pack",
+      "sha256": "3cac682e644b938930d2e84d035c73b705a8d702c707c5d8d6e011075800a4a7"
+    },
+    "clientJar": {
+      "name": "client.jar",
+      "sha256": "8320c4a70697c8a5f963c54722b822a17e5e38b5761f50738c2f1f6495ac8839"
+    },
+    "clientVersion": "26.2",
+    "clientRules": "26.2",
+    "assetIndex": {
+      "name": "test.json",
+      "sha256": "5466c623963da5bfb0f50a3b8023bc888218f22533b8089f53e48e590029ad1a"
+    }
+  },
+  "views": [
+    {
+      "id": "base",
+      "format": "88.0",
+      "overlays": [ ],
+      "verified": true
+    }
+  ],
+  "summary": {
+    "files": 4,
+    "bytes": 299,
+    "reached": 3,
+    "orphans": 1,
+    "orphanBytes": 4,
+    "atlasLoadedOrphans": 0,
+    "atlasLoadedOrphanBytes": 0,
+    "unused": 0,
+    "unusedBytes": 0,
+    "deadBlockstates": 0,
+    "missing": 2,
+    "notStitched": 0,
+    "otherFormatsMissing": 0,
+    "otherFormatsNotStitched": 0,
+    "unknown": 0,
+    "invalid": 0,
+    "unmatchedUsages": 0
+  },
+  "byKind": [
+    {
+      "kind": "pack_meta",
+      "files": 1,
+      "bytes": 73,
+      "reached": 1,
+      "unreached": 0,
+      "unreachedBytes": 0
+    },
+    {
+      "kind": "sounds_json",
+      "files": 1,
+      "bytes": 218,
+      "reached": 1,
+      "unreached": 0,
+      "unreachedBytes": 0
+    },
+    {
+      "kind": "sound",
+      "files": 2,
+      "bytes": 8,
+      "reached": 1,
+      "unreached": 1,
+      "unreachedBytes": 4
+    }
+  ],
+  "orphans": [
+    {
+      "path": "assets/minecraft/sounds/custom/unused.ogg",
+      "kind": "sound",
+      "bytes": 4
+    }
+  ],
+  "atlasLoadedOrphans": [ ],
+  "deadBlockstates": [ ],
+  "removable": [
+    "assets/minecraft/sounds/custom/unused.ogg"
+  ],
+  "missing": [
+    {
+      "source": "assets/minecraft/sounds.json",
+      "target": "assets/minecraft/sounds/ambient/cave/cavee1.ogg",
+      "reason": "sound.file",
+      "views": [
+        "88.0"
+      ]
+    },
+    {
+      "source": "assets/minecraft/sounds.json",
+      "target": "minecraft:block.stone.brake",
+      "reason": "sound.event",
+      "views": [
+        "88.0"
+      ]
+    }
+  ],
+  "notStitched": [ ],
+  "otherFormats": {
+    "missing": [ ],
+    "notStitched": [ ]
+  },
+  "unknown": [ ],
+  "invalid": [ ],
+  "sources": [ ],
+  "sourceRoots": [ ],
+  "unusedItems": [ ],
+  "warnings": [
+    "no source reads data packs or item components: textures only they name (entity variants, camera overlays, trims, banners) look like orphans here; keep-list them"
+  ]
+}

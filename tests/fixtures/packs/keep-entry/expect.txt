@@ -1,0 +1,6 @@
+reached assets/fx/textures/misc/plugin_icon.png
+reached assets/fx/models/runtime/menu.json
+reached assets/fx/textures/item/menu.png
+orphan assets/fx/textures/misc/orphan.png
+usage keep keep.yml:7 unmatched
+usage keep keep.yml:3 matched

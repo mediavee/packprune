@@ -1,0 +1,3 @@
+item_definition | viki:json_icon |  | plugin.json:2 icon.item_model | 
+font | viki:json_font |  | plugin.json:4 texts[0].font | 
+sound_event | viki:json_sound |  | plugin.json:7 sound | 

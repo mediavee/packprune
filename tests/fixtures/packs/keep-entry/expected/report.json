@@ -1,0 +1,153 @@
+{
+  "schema": 4,
+  "tool": {
+    "name": "packprune",
+    "version": "test"
+  },
+  "inputs": {
+    "pack": {
+      "name": "pack",
+      "sha256": "bd9e3bd2b5f0a247cb744e6b0070e2f02926eecd9bfb16699bd6bee6c5ff615d"
+    },
+    "clientJar": {
+      "name": "client.jar",
+      "sha256": "8320c4a70697c8a5f963c54722b822a17e5e38b5761f50738c2f1f6495ac8839"
+    },
+    "clientVersion": "26.2",
+    "clientRules": "26.2",
+    "assetIndex": {
+      "name": "none",
+      "sha256": ""
+    }
+  },
+  "views": [
+    {
+      "id": "base",
+      "format": "88.0",
+      "overlays": [ ],
+      "verified": true
+    }
+  ],
+  "summary": {
+    "files": 5,
+    "bytes": 118,
+    "reached": 4,
+    "orphans": 1,
+    "orphanBytes": 3,
+    "atlasLoadedOrphans": 0,
+    "atlasLoadedOrphanBytes": 0,
+    "unused": 0,
+    "unusedBytes": 0,
+    "deadBlockstates": 0,
+    "missing": 0,
+    "notStitched": 0,
+    "otherFormatsMissing": 0,
+    "otherFormatsNotStitched": 0,
+    "unknown": 0,
+    "invalid": 0,
+    "unmatchedUsages": 1
+  },
+  "byKind": [
+    {
+      "kind": "pack_meta",
+      "files": 1,
+      "bytes": 73,
+      "reached": 1,
+      "unreached": 0,
+      "unreachedBytes": 0
+    },
+    {
+      "kind": "model",
+      "files": 1,
+      "bytes": 36,
+      "reached": 1,
+      "unreached": 0,
+      "unreachedBytes": 0
+    },
+    {
+      "kind": "texture",
+      "files": 3,
+      "bytes": 9,
+      "reached": 2,
+      "unreached": 1,
+      "unreachedBytes": 3
+    }
+  ],
+  "orphans": [
+    {
+      "path": "assets/fx/textures/misc/orphan.png",
+      "kind": "texture",
+      "bytes": 3
+    }
+  ],
+  "atlasLoadedOrphans": [ ],
+  "deadBlockstates": [ ],
+  "removable": [
+    "assets/fx/textures/misc/orphan.png"
+  ],
+  "missing": [ ],
+  "notStitched": [ ],
+  "otherFormats": {
+    "missing": [ ],
+    "notStitched": [ ]
+  },
+  "unknown": [ ],
+  "invalid": [ ],
+  "sources": [
+    {
+      "id": "keep",
+      "inputs": [
+        {
+          "name": "keep.yml",
+          "sha256": "bb33daffa34a020c024386bd56972a10cec6010f6646e689facd7a06f8bb0fda"
+        }
+      ],
+      "usages": 3,
+      "matched": 2,
+      "vanilla": 0,
+      "unmatched": [
+        {
+          "source": "keep",
+          "location": "keep.yml:7",
+          "reason": "stale",
+          "kind": "sprite",
+          "id": "fx:nothing/*",
+          "atlas": ""
+        }
+      ]
+    }
+  ],
+  "sourceRoots": [
+    {
+      "path": "assets/fx/models/runtime/menu.json",
+      "usages": [
+        {
+          "source": "keep",
+          "location": "keep.yml:5",
+          "reason": "models a plugin sets at runtime",
+          "kind": "model",
+          "id": "fx:runtime/*",
+          "atlas": ""
+        }
+      ]
+    },
+    {
+      "path": "assets/fx/textures/misc/plugin_icon.png",
+      "usages": [
+        {
+          "source": "keep",
+          "location": "keep.yml:3",
+          "reason": "sent by plugin code",
+          "kind": "path",
+          "id": "assets/fx/textures/misc/plugin_*.png",
+          "atlas": ""
+        }
+      ]
+    }
+  ],
+  "unusedItems": [ ],
+  "warnings": [
+    "no asset index: minecraft: sound files and events the pack does not define are assumed vanilla, and every file under minecraft:sounds/ is kept",
+    "no source reads data packs or item components: textures only they name (entity variants, camera overlays, trims, banners) look like orphans here; keep-list them"
+  ]
+}

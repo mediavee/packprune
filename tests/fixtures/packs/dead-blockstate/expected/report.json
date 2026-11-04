@@ -1,0 +1,127 @@
+{
+  "schema": 4,
+  "tool": {
+    "name": "packprune",
+    "version": "test"
+  },
+  "inputs": {
+    "pack": {
+      "name": "pack",
+      "sha256": "4866c8dae9cfd5ec048055fe233740f7e05b23f57316e4b49545dfaf310b2575"
+    },
+    "clientJar": {
+      "name": "client.jar",
+      "sha256": "8320c4a70697c8a5f963c54722b822a17e5e38b5761f50738c2f1f6495ac8839"
+    },
+    "clientVersion": "26.2",
+    "clientRules": "26.2",
+    "assetIndex": {
+      "name": "none",
+      "sha256": ""
+    }
+  },
+  "views": [
+    {
+      "id": "base",
+      "format": "88.0",
+      "overlays": [ ],
+      "verified": true
+    }
+  ],
+  "summary": {
+    "files": 8,
+    "bytes": 471,
+    "reached": 5,
+    "orphans": 1,
+    "orphanBytes": 79,
+    "atlasLoadedOrphans": 1,
+    "atlasLoadedOrphanBytes": 3,
+    "unused": 0,
+    "unusedBytes": 0,
+    "deadBlockstates": 1,
+    "missing": 0,
+    "notStitched": 0,
+    "otherFormatsMissing": 0,
+    "otherFormatsNotStitched": 0,
+    "unknown": 0,
+    "invalid": 0,
+    "unmatchedUsages": 0
+  },
+  "byKind": [
+    {
+      "kind": "pack_meta",
+      "files": 1,
+      "bytes": 73,
+      "reached": 1,
+      "unreached": 0,
+      "unreachedBytes": 0
+    },
+    {
+      "kind": "model",
+      "files": 3,
+      "bytes": 239,
+      "reached": 2,
+      "unreached": 1,
+      "unreachedBytes": 79
+    },
+    {
+      "kind": "texture",
+      "files": 2,
+      "bytes": 6,
+      "reached": 1,
+      "unreached": 1,
+      "unreachedBytes": 3
+    },
+    {
+      "kind": "blockstate",
+      "files": 2,
+      "bytes": 153,
+      "reached": 1,
+      "unreached": 1,
+      "unreachedBytes": 57
+    }
+  ],
+  "orphans": [
+    {
+      "path": "assets/fx/models/block/custom.json",
+      "kind": "model",
+      "bytes": 79
+    }
+  ],
+  "atlasLoadedOrphans": [
+    {
+      "path": "assets/fx/textures/block/custom.png",
+      "kind": "texture",
+      "bytes": 3,
+      "atlases": [
+        "minecraft:blocks"
+      ]
+    }
+  ],
+  "deadBlockstates": [
+    {
+      "path": "assets/fx/blockstates/custom.json",
+      "kind": "blockstate",
+      "bytes": 57
+    }
+  ],
+  "removable": [
+    "assets/fx/blockstates/custom.json",
+    "assets/fx/models/block/custom.json"
+  ],
+  "missing": [ ],
+  "notStitched": [ ],
+  "otherFormats": {
+    "missing": [ ],
+    "notStitched": [ ]
+  },
+  "unknown": [ ],
+  "invalid": [ ],
+  "sources": [ ],
+  "sourceRoots": [ ],
+  "unusedItems": [ ],
+  "warnings": [
+    "no asset index: minecraft: sound files and events the pack does not define are assumed vanilla, and every file under minecraft:sounds/ is kept",
+    "no source reads data packs or item components: textures only they name (entity variants, camera overlays, trims, banners) look like orphans here; keep-list them"
+  ]
+}

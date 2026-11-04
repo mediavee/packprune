@@ -1,0 +1,1 @@
+{"sources": [{"type": "minecraft:single", "resource": "fx:loose/kept"}, {"type": "minecraft:single", "resource": "fx:loose/dropped"}, {"type": "minecraft:filter", "pattern": {"namespace": "fx", "path": "dropped"}}]}

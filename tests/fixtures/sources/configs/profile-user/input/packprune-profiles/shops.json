@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "name": "shops",
+  "why": "Shop menus name items by bare Nexo ids and icons by gui sprite name",
+  "files": ["Shops/**"],
+  "exclude": ["Shops/cache/**"],
+  "placeholders": ["@@"],
+  "rules": [
+    {"key": "material", "kind": "item_definition", "id": "nexo:{value}"},
+    {"key": "icon", "under": "display", "kind": "sprite", "atlas": "minecraft:gui", "id": "icons/{path}"}
+  ]
+}

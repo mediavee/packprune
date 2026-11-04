@@ -1,0 +1,17 @@
+sprite | viki:gui/advancements/backgrounds/tab |  | input!data/viki/advancement/tab/root.json display.background | 
+sprite | viki:entity/cat/ginger |  | input!data/viki/cat_variant/ginger.json asset_id | 
+sprite | viki:entity/cat/ginger_baby |  | input!data/viki/cat_variant/ginger.json baby_asset_id | 
+sprite | viki:entity/chicken/black |  | input!data/viki/chicken_variant/black.json asset_id | 
+sprite | viki:entity/chicken/black_baby |  | input!data/viki/chicken_variant/black.json baby_asset_id | 
+sprite | viki:entity/cow/dun |  | input!data/viki/cow_variant/dun.json asset_id | 
+sprite | viki:entity/cow/dun_baby |  | input!data/viki/cow_variant/dun.json baby_asset_id | 
+sprite | viki:entity/frog/moss |  | input!data/viki/frog_variant/moss.json asset_id | 
+sprite | viki:entity/pig/spotted |  | input!data/viki/pig_variant/spotted.json asset_id | 
+sprite | viki:entity/pig/spotted_baby |  | input!data/viki/pig_variant/spotted.json baby_asset_id | 
+sprite | viki:entity/wolf/dire |  | input!data/viki/wolf_variant/dire.json assets.wild | 
+sprite | viki:entity/wolf/dire_tame |  | input!data/viki/wolf_variant/dire.json assets.tame | 
+sprite | viki:entity/wolf/dire_angry |  | input!data/viki/wolf_variant/dire.json assets.angry | 
+sprite | viki:entity/wolf/dire_baby |  | input!data/viki/wolf_variant/dire.json baby_assets.wild | 
+sprite | viki:entity/wolf/dire_tame_baby |  | input!data/viki/wolf_variant/dire.json baby_assets.tame | 
+sprite | viki:entity/wolf/dire_angry_baby |  | input!data/viki/wolf_variant/dire.json baby_assets.angry | 
+sprite | viki:entity/nautilus/deep |  | input!data/viki/zombie_nautilus_variant/deep.json asset_id | 

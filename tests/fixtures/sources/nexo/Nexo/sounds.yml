@@ -1,0 +1,14 @@
+settings:
+  generate_sounds: true
+
+sounds:
+  - id: fx:ui.click
+    sound: fx:ui/click.ogg
+  - id: fx:ambient.wind
+    sounds:
+      - fx:ambient/wind_1
+      - fx:ambient/wind_2.ogg
+  - id: fx:ui.alias
+    type: EVENT
+    reference_id: fx:ui.click
+  - sound: fx:no_id_is_skipped

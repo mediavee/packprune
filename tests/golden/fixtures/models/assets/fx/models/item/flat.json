@@ -1,0 +1,4 @@
+{"textures": {"a": "fx:item/a"}, "elements": [
+ {"from": [0, 0, 8], "to": [16, 16, 8], "faces": {"north": {"texture": "#a"}, "south": {"texture": "#a"}, "up": {"texture": "#a"}, "east": {"texture": "#a"}}},
+ {"from": [4, 0, 0], "to": [4, 0, 16], "faces": {"up": {"texture": "#a"}, "west": {"texture": "#a"}}},
+ {"from": [1, 1, 1], "to": [2, 2, 2], "faces": {"down": {"texture": "#a"}}}]}

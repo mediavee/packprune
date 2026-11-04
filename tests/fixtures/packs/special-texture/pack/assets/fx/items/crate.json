@@ -1,0 +1,1 @@
+{"model": {"type": "minecraft:select", "property": "minecraft:custom_model_data", "cases": [{"when": "open", "model": {"type": "minecraft:special", "base": "fx:item/crate", "model": {"type": "minecraft:chest", "texture": "fx:crate"}}}], "fallback": {"type": "minecraft:special", "base": "fx:item/crate", "model": {"type": "minecraft:shulker_box", "texture": "fx:crate_box"}}}}

@@ -1,0 +1,14 @@
+reached assets/fx/textures/gui/sprites/tooltip/fancy_background.png
+reached assets/fx/textures/gui/sprites/tooltip/fancy_frame.png
+reached assets/fx/textures/gui/sprites/tooltip/fancy_frame.png.mcmeta
+reached assets/fx/textures/gui/sprites/icon/coin.png
+atlas_loaded_orphan assets/fx/textures/gui/sprites/icon/other.png
+usage lines usages.txt:1 matched
+usage lines usages.txt:2 matched
+usage lines usages.txt:3 unmatched
+usage lines usages.txt:4 unmatched
+usage lines usages.txt:5 vanilla
+usage lines usages.txt:6 vanilla
+usage lines usages.txt:7 vanilla
+usage lines usages.txt:8 vanilla
+usage lines usages.txt:9 matched

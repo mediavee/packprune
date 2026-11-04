@@ -1,0 +1,8 @@
+greeting: "<font:viki:hud>x</font> and <FONT:'viki:quoted'>y</FONT>"
+default-ns: "<font:uniform>z"
+sprites: "<sprite:block/stone> <sprite:items:item/gem> <sprite:'viki:items':'viki:item/ruby'/>"
+escaped: "\\<font:viki:escaped>"
+placeholder: "<font:<name>>"
+unterminated: "<font:viki:open"
+other: "<red>no pack id</red> <gradient:red:blue>x</gradient>"
+nameless: "<font>"

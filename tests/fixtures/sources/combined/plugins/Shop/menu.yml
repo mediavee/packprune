@@ -1,0 +1,5 @@
+gem:
+  item-model: viki:gem
+  name: "<font:viki:hud>Gem</font>"
+gone:
+  item-model: viki:removed

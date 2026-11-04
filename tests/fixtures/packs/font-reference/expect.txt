@@ -1,0 +1,4 @@
+reached assets/fx/textures/font/glyphs.png
+reached assets/fx/font/hud.ttf
+reached assets/fx/font/extra.zip
+orphan assets/fx/textures/font/unused.png

@@ -1,0 +1,5 @@
+reached assets/minecraft/blockstates/stone.json
+reached assets/fx/models/block/stone_b.json
+dead_blockstate assets/fx/blockstates/custom.json
+orphan assets/fx/models/block/custom.json
+atlas_loaded_orphan assets/fx/textures/block/custom.png

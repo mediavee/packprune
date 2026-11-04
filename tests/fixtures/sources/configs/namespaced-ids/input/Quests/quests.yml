@@ -1,0 +1,8 @@
+reward:
+  material: nexo:alpha
+  item-model: nexo:beta
+  name: "Plain words: not an id"
+  count: 3
+  title: "%player%:x"
+  bare: gamma
+  sound: example:ui.click

@@ -1,0 +1,183 @@
+{
+  "schema": 4,
+  "tool": {
+    "name": "packprune",
+    "version": "test"
+  },
+  "inputs": {
+    "pack": {
+      "name": "pack",
+      "sha256": "b6839853c299a60b3093c206c53bcd593cde7b705f91f0bc8c568a56641dbdb0"
+    },
+    "clientJar": {
+      "name": "client.jar",
+      "sha256": "8320c4a70697c8a5f963c54722b822a17e5e38b5761f50738c2f1f6495ac8839"
+    },
+    "clientVersion": "26.2",
+    "clientRules": "26.2",
+    "assetIndex": {
+      "name": "none",
+      "sha256": ""
+    }
+  },
+  "views": [
+    {
+      "id": "base",
+      "format": "88.0",
+      "overlays": [ ],
+      "verified": true
+    }
+  ],
+  "summary": {
+    "files": 6,
+    "bytes": 126,
+    "reached": 5,
+    "orphans": 0,
+    "orphanBytes": 0,
+    "atlasLoadedOrphans": 1,
+    "atlasLoadedOrphanBytes": 3,
+    "unused": 0,
+    "unusedBytes": 0,
+    "deadBlockstates": 0,
+    "missing": 0,
+    "notStitched": 0,
+    "otherFormatsMissing": 0,
+    "otherFormatsNotStitched": 0,
+    "unknown": 0,
+    "invalid": 0,
+    "unmatchedUsages": 2
+  },
+  "byKind": [
+    {
+      "kind": "pack_meta",
+      "files": 1,
+      "bytes": 73,
+      "reached": 1,
+      "unreached": 0,
+      "unreachedBytes": 0
+    },
+    {
+      "kind": "texture",
+      "files": 4,
+      "bytes": 12,
+      "reached": 3,
+      "unreached": 1,
+      "unreachedBytes": 3
+    },
+    {
+      "kind": "texture_meta",
+      "files": 1,
+      "bytes": 41,
+      "reached": 1,
+      "unreached": 0,
+      "unreachedBytes": 0
+    }
+  ],
+  "orphans": [ ],
+  "atlasLoadedOrphans": [
+    {
+      "path": "assets/fx/textures/gui/sprites/icon/other.png",
+      "kind": "texture",
+      "bytes": 3,
+      "atlases": [
+        "minecraft:gui"
+      ]
+    }
+  ],
+  "deadBlockstates": [ ],
+  "removable": [ ],
+  "missing": [ ],
+  "notStitched": [ ],
+  "otherFormats": {
+    "missing": [ ],
+    "notStitched": [ ]
+  },
+  "unknown": [ ],
+  "invalid": [ ],
+  "sources": [
+    {
+      "id": "lines",
+      "inputs": [
+        {
+          "name": "usages.txt",
+          "sha256": "b094b4ae759afed4d54cf92844fb133fbe957616657e5ce939e9cbb51189a455"
+        }
+      ],
+      "usages": 9,
+      "matched": 3,
+      "vanilla": 4,
+      "unmatched": [
+        {
+          "source": "lines",
+          "location": "usages.txt:3",
+          "reason": "",
+          "kind": "tooltip_style",
+          "id": "fx:gone",
+          "atlas": ""
+        },
+        {
+          "source": "lines",
+          "location": "usages.txt:4",
+          "reason": "",
+          "kind": "sprite",
+          "id": "fx:icon/coin",
+          "atlas": "minecraft:particles"
+        }
+      ]
+    }
+  ],
+  "sourceRoots": [
+    {
+      "path": "assets/fx/textures/gui/sprites/icon/coin.png",
+      "usages": [
+        {
+          "source": "lines",
+          "location": "usages.txt:2",
+          "reason": "",
+          "kind": "sprite",
+          "id": "fx:icon/coin",
+          "atlas": "minecraft:gui"
+        },
+        {
+          "source": "lines",
+          "location": "usages.txt:9",
+          "reason": "",
+          "kind": "sprite",
+          "id": "fx:icon/c?in",
+          "atlas": "minecraft:gui"
+        }
+      ]
+    },
+    {
+      "path": "assets/fx/textures/gui/sprites/tooltip/fancy_background.png",
+      "usages": [
+        {
+          "source": "lines",
+          "location": "usages.txt:1",
+          "reason": "",
+          "kind": "tooltip_style",
+          "id": "fx:fancy",
+          "atlas": ""
+        }
+      ]
+    },
+    {
+      "path": "assets/fx/textures/gui/sprites/tooltip/fancy_frame.png",
+      "usages": [
+        {
+          "source": "lines",
+          "location": "usages.txt:1",
+          "reason": "",
+          "kind": "tooltip_style",
+          "id": "fx:fancy",
+          "atlas": ""
+        }
+      ]
+    }
+  ],
+  "unusedItems": [ ],
+  "warnings": [
+    "no asset index: minecraft: sound files and events the pack does not define are assumed vanilla, and every file under minecraft:sounds/ is kept",
+    "no source reads data packs or item components: textures only they name (entity variants, camera overlays, trims, banners) look like orphans here; keep-list them"
+  ]
+}

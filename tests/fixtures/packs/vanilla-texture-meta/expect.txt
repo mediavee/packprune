@@ -1,0 +1,3 @@
+reached assets/minecraft/textures/block/stone.png.mcmeta
+reached ov/assets/minecraft/textures/gui/sprites/hud/hotbar.png.mcmeta
+orphan assets/fx/textures/item/gone.png.mcmeta

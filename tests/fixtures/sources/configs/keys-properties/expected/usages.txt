@@ -1,0 +1,3 @@
+item_definition | nexo:prop |  | menu.properties:2 menu.item-model | 
+font | viki:propfont |  | menu.properties:3 menu.font | 
+sound_event | viki:continued |  | menu.properties:4 long.sound | 

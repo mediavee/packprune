@@ -1,0 +1,2 @@
+reached assets/fx/models/block/template.json
+reached assets/fx/textures/block/wall.png

@@ -1,0 +1,445 @@
+[
+  {
+    "name": "glob",
+    "source": "configs",
+    "files": {
+      "menu.yml": "icon: fx:root\n",
+      "packprune-profiles/p.json": "{\"version\": 1, \"name\": \"menus\", \"files\": [\"**/menu.yml\"], \"rules\": [{\"key\": \"icon\", \"kind\": \"font\"}]}\n",
+      "sub/menu.yml": "icon: fx:sub\n"
+    },
+    "expected": [
+      [
+        "item_definition",
+        "fx:root",
+        "",
+        "menu.yml:1 icon",
+        "",
+        "",
+        true
+      ],
+      [
+        "font",
+        "fx:sub",
+        "",
+        "sub/menu.yml:1 icon",
+        "",
+        "",
+        false
+      ]
+    ]
+  },
+  {
+    "name": "tags",
+    "source": "configs",
+    "files": {
+      "menu.yml": "title: \"<font:fx:a>\"\nextra: !custom\n  font: fx:b\n"
+    },
+    "expected": [
+      [
+        "font",
+        "fx:a",
+        "",
+        "menu.yml:1 title <font:fx:a>",
+        "MiniMessage tag",
+        "",
+        false
+      ],
+      [
+        "font",
+        "fx:b",
+        "",
+        "menu.yml:3 extra.font",
+        "",
+        "",
+        false
+      ]
+    ]
+  },
+  {
+    "name": "tags2",
+    "source": "configs",
+    "files": {
+      "menu.yml": "title: \"<font:fx:a>\"\nwhen: !!timestamp 2001-12-14\nflag: !!bool yes\n"
+    },
+    "expected": [
+      [
+        "font",
+        "fx:a",
+        "",
+        "menu.yml:1 title <font:fx:a>",
+        "MiniMessage tag",
+        "",
+        false
+      ]
+    ]
+  },
+  {
+    "name": "lines",
+    "source": "configs",
+    "files": {
+      "menu.yml": "a:\n  lore: |\n    <font:fx:block>\n  title: >-\n    hello\n    <font:fx:folded>\n  icon: &x\n    font: fx:anch\n  again: *x\n  font:\n    fx:nextline\n  list:\n  - font: fx:item\n  - \"<sprite:fx:atl:spr>\"\n  k: !!str \"<font:fx:tagged>\"\n  'quoted key': {font: fx:qk}\n"
+    },
+    "expected": [
+      [
+        "font",
+        "fx:block",
+        "",
+        "menu.yml:2 a.lore <font:fx:block>",
+        "MiniMessage tag",
+        "",
+        false
+      ],
+      [
+        "font",
+        "fx:folded",
+        "",
+        "menu.yml:4 a.title <font:fx:folded>",
+        "MiniMessage tag",
+        "",
+        false
+      ],
+      [
+        "font",
+        "fx:anch",
+        "",
+        "menu.yml:8 a.icon.font",
+        "",
+        "",
+        false
+      ],
+      [
+        "font",
+        "fx:anch",
+        "",
+        "menu.yml:8 a.again.font",
+        "",
+        "",
+        false
+      ],
+      [
+        "font",
+        "fx:nextline",
+        "",
+        "menu.yml:11 a.font",
+        "",
+        "",
+        false
+      ],
+      [
+        "font",
+        "fx:item",
+        "",
+        "menu.yml:13 a.list[0].font",
+        "",
+        "",
+        false
+      ],
+      [
+        "sprite",
+        "minecraft:atl",
+        "minecraft:fx",
+        "menu.yml:14 a.list[1] <sprite:fx:atl:spr>",
+        "MiniMessage tag",
+        "",
+        false
+      ],
+      [
+        "font",
+        "fx:tagged",
+        "",
+        "menu.yml:15 a.k <font:fx:tagged>",
+        "MiniMessage tag",
+        "",
+        false
+      ],
+      [
+        "font",
+        "fx:qk",
+        "",
+        "menu.yml:16 a.quoted key.font",
+        "",
+        "",
+        false
+      ]
+    ]
+  },
+  {
+    "name": "lines2",
+    "source": "configs",
+    "files": {
+      "menu.yml": "a:\n  font: &f\n    fx:anchored\n  b:\n    font: *f\n  c:\n    font: !!str\n      fx:tagnext\n  d:\n    font: \"fx:multi\n      line\"\n---\nfont: fx:doc2\n"
+    },
+    "expected": [
+      [
+        "font",
+        "fx:anchored",
+        "",
+        "menu.yml:2 a.font",
+        "",
+        "",
+        false
+      ],
+      [
+        "font",
+        "fx:anchored",
+        "",
+        "menu.yml:2 a.b.font",
+        "",
+        "",
+        false
+      ],
+      [
+        "font",
+        "fx:tagnext",
+        "",
+        "menu.yml:7 a.c.font",
+        "",
+        "",
+        false
+      ],
+      [
+        "font",
+        "fx:doc2",
+        "",
+        "menu.yml:13 font",
+        "",
+        "",
+        false
+      ]
+    ]
+  },
+  {
+    "name": "indent1",
+    "source": "configs",
+    "files": {
+      "menu.yml": "a:\n  b: [fx:x,\nfx:y]\n  font: fx:z\n"
+    },
+    "expected": [
+      [
+        "item_definition",
+        "fx:x",
+        "",
+        "menu.yml:2 a.b[0]",
+        "",
+        "",
+        true
+      ],
+      [
+        "item_definition",
+        "fx:y",
+        "",
+        "menu.yml:3 a.b[1]",
+        "",
+        "",
+        true
+      ],
+      [
+        "font",
+        "fx:z",
+        "",
+        "menu.yml:4 a.font",
+        "",
+        "",
+        false
+      ]
+    ]
+  },
+  {
+    "name": "indent2",
+    "source": "configs",
+    "files": {
+      "menu.yml": "a:\n  font: \"fx:x\n fx:y\"\n"
+    },
+    "expected": []
+  },
+  {
+    "name": "indent3",
+    "source": "configs",
+    "files": {
+      "menu.yml": "a:\n  b: {font: fx:q,\nsprite: fx:r}\n"
+    },
+    "expected": [
+      [
+        "font",
+        "fx:q",
+        "",
+        "menu.yml:2 a.b.font",
+        "",
+        "",
+        false
+      ],
+      [
+        "item_definition",
+        "fx:r",
+        "",
+        "menu.yml:3 a.b.sprite",
+        "",
+        "",
+        true
+      ]
+    ]
+  },
+  {
+    "name": "edge",
+    "source": "configs",
+    "files": {
+      "menu.yml": "null:\n  font: fx:nullkey\ntitle: '{\"text\":\"😀\",\"font\":\"fx:emoji\"}'\ndup: '{\"extra\":[{\"font\":\"fx:one\"}],\"extra\":[{\"font\":\"fx:two\"}]}'\n"
+    },
+    "expected": [
+      [
+        "font",
+        "fx:nullkey",
+        "",
+        "menu.yml:2 null.font",
+        "",
+        "",
+        false
+      ],
+      [
+        "font",
+        "fx:emoji",
+        "",
+        "menu.yml:3 title json.font",
+        "JSON text component",
+        "",
+        false
+      ],
+      [
+        "font",
+        "fx:two",
+        "",
+        "menu.yml:4 dup json.extra[0].font",
+        "JSON text component",
+        "",
+        false
+      ]
+    ]
+  },
+  {
+    "name": "nexo-merge",
+    "source": "nexo",
+    "files": {
+      "items/a.yml": "sword:\n  material: PAPER\n  Pack:\n    model: fx:item/sword\n  Components:\n    food: &food\n      nutrition: 1\n    consumable:\n      <<: *food\n"
+    },
+    "expected": [
+      [
+        "model",
+        "fx:item/sword",
+        "",
+        "items/a.yml:4",
+        "item sword Pack.model",
+        "items/a.yml:1",
+        false
+      ],
+      [
+        "item_definition",
+        "nexo:sword",
+        "",
+        "items/a.yml:1",
+        "item sword: the definition Nexo generates for it",
+        "items/a.yml:1",
+        false
+      ]
+    ]
+  },
+  {
+    "name": "nexo-nullkey",
+    "source": "nexo",
+    "files": {
+      "items/a.yml": "sword:\n  material: PAPER\n  Pack:\n    model: fx:item/sword\n  lore:\n    ~: x\n"
+    },
+    "expected": [
+      [
+        "model",
+        "fx:item/sword",
+        "",
+        "items/a.yml:4",
+        "item sword Pack.model",
+        "items/a.yml:1",
+        false
+      ],
+      [
+        "item_definition",
+        "nexo:sword",
+        "",
+        "items/a.yml:1",
+        "item sword: the definition Nexo generates for it",
+        "items/a.yml:1",
+        false
+      ]
+    ]
+  },
+  {
+    "name": "nexo-schema",
+    "source": "nexo",
+    "files": {
+      "items/a.yml": "sword:\n  material: PAPER\n  Pack:\n    model: ~\n    texture: Null\n  CustomArmor:\n    layer1: 0x1f\n    layer2: True\n"
+    },
+    "expected": [
+      [
+        "model",
+        "~",
+        "",
+        "items/a.yml:4",
+        "unresolvable: item sword Pack.model is not a resource id: a placeholder or an invalid key",
+        "items/a.yml:1",
+        false
+      ],
+      [
+        "sprite",
+        "Null",
+        "",
+        "items/a.yml:5",
+        "unresolvable: item sword Pack.texture is not a resource id: a placeholder or an invalid key",
+        "items/a.yml:1",
+        false
+      ],
+      [
+        "item_definition",
+        "nexo:sword",
+        "",
+        "items/a.yml:1",
+        "item sword: the definition Nexo generates for it",
+        "items/a.yml:1",
+        false
+      ],
+      [
+        "sprite",
+        "minecraft:0x1f",
+        "",
+        "items/a.yml:7",
+        "item sword CustomArmor.layer1",
+        "items/a.yml:1",
+        false
+      ],
+      [
+        "sprite",
+        "True",
+        "",
+        "items/a.yml:8",
+        "unresolvable: item sword CustomArmor.layer2 is not a resource id: a placeholder or an invalid key",
+        "items/a.yml:1",
+        false
+      ]
+    ]
+  },
+  {
+    "name": "dp",
+    "source": "datapacks",
+    "files": {
+      "pk/data/fx/painting_variant/a.json": "{\"asset_id\":\"fx:one\",\"width\":1,\"height\":1,\"asset_id\":\"fx:two\"}",
+      "pk/pack.mcmeta": "{\"pack\":{\"pack_format\":80,\"description\":\"\"}}"
+    },
+    "expected": [
+      [
+        "sprite",
+        "fx:two",
+        "minecraft:paintings",
+        "pk!data/fx/painting_variant/a.json asset_id",
+        "",
+        "",
+        false
+      ]
+    ]
+  }
+]

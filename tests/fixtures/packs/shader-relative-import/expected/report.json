@@ -1,0 +1,109 @@
+{
+  "schema": 4,
+  "tool": {
+    "name": "packprune",
+    "version": "test"
+  },
+  "inputs": {
+    "pack": {
+      "name": "pack",
+      "sha256": "de3defb3394d7357a092af2668fe8ae39aae534e16ce7db3fa1adbe266e29d6f"
+    },
+    "clientJar": {
+      "name": "client.jar",
+      "sha256": "8320c4a70697c8a5f963c54722b822a17e5e38b5761f50738c2f1f6495ac8839"
+    },
+    "clientVersion": "26.2",
+    "clientRules": "26.2",
+    "assetIndex": {
+      "name": "none",
+      "sha256": ""
+    }
+  },
+  "views": [
+    {
+      "id": "base",
+      "format": "88.0",
+      "overlays": [ ],
+      "verified": true
+    }
+  ],
+  "summary": {
+    "files": 11,
+    "bytes": 532,
+    "reached": 9,
+    "orphans": 2,
+    "orphanBytes": 89,
+    "atlasLoadedOrphans": 0,
+    "atlasLoadedOrphanBytes": 0,
+    "unused": 0,
+    "unusedBytes": 0,
+    "deadBlockstates": 0,
+    "missing": 0,
+    "notStitched": 0,
+    "otherFormatsMissing": 0,
+    "otherFormatsNotStitched": 0,
+    "unknown": 0,
+    "invalid": 0,
+    "unmatchedUsages": 0
+  },
+  "byKind": [
+    {
+      "kind": "pack_meta",
+      "files": 1,
+      "bytes": 73,
+      "reached": 1,
+      "unreached": 0,
+      "unreachedBytes": 0
+    },
+    {
+      "kind": "shader",
+      "files": 2,
+      "bytes": 124,
+      "reached": 2,
+      "unreached": 0,
+      "unreachedBytes": 0
+    },
+    {
+      "kind": "shader_include",
+      "files": 8,
+      "bytes": 335,
+      "reached": 6,
+      "unreached": 2,
+      "unreachedBytes": 89
+    }
+  ],
+  "orphans": [
+    {
+      "path": "assets/fx/shaders/include/commented.glsl",
+      "kind": "shader_include",
+      "bytes": 38
+    },
+    {
+      "path": "assets/minecraft/shaders/include/lib/b.glsl",
+      "kind": "shader_include",
+      "bytes": 51
+    }
+  ],
+  "atlasLoadedOrphans": [ ],
+  "deadBlockstates": [ ],
+  "removable": [
+    "assets/fx/shaders/include/commented.glsl",
+    "assets/minecraft/shaders/include/lib/b.glsl"
+  ],
+  "missing": [ ],
+  "notStitched": [ ],
+  "otherFormats": {
+    "missing": [ ],
+    "notStitched": [ ]
+  },
+  "unknown": [ ],
+  "invalid": [ ],
+  "sources": [ ],
+  "sourceRoots": [ ],
+  "unusedItems": [ ],
+  "warnings": [
+    "no asset index: minecraft: sound files and events the pack does not define are assumed vanilla, and every file under minecraft:sounds/ is kept",
+    "no source reads data packs or item components: textures only they name (entity variants, camera overlays, trims, banners) look like orphans here; keep-list them"
+  ]
+}

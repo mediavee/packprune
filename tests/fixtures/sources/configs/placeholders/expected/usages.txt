@@ -1,0 +1,5 @@
+item_definition | nexo:{model} |  | lines.yml:1 braces.item-model | unresolvable: placeholder
+font | %font% |  | lines.yml:2 percent.font | unresolvable: placeholder
+tooltip_style | ${style} |  | lines.yml:3 dollar.tooltip-style | unresolvable: placeholder
+item_definition | nexo:_{x} |  | lines.yml:4 wild.item-model | unresolvable: placeholder
+item_definition | nexo:fine |  | lines.yml:5 plain.item-model | 

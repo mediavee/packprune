@@ -1,0 +1,5 @@
+{
+  "assets": {"wild": "viki:entity/wolf/dire", "tame": "viki:entity/wolf/dire_tame", "angry": "viki:entity/wolf/dire_angry"},
+  "baby_assets": {"wild": "viki:entity/wolf/dire_baby", "tame": "viki:entity/wolf/dire_tame_baby", "angry": "viki:entity/wolf/dire_angry_baby"},
+  "spawn_conditions": []
+}

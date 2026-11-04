@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+# The gate: the same command locally and in CI.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+step() { printf '\n== %s\n' "$*"; }
+
+step fmt
+cargo fmt --all --check
+
+step clippy
+cargo clippy --workspace --all-targets --locked -- -D warnings
+
+step test
+cargo test --workspace --locked
+
+step "cargo deny: advisories, duplicate versions, licences, sources"
+cargo deny --locked check advisories bans licenses sources
+
+step "crate edges"
+# Each workspace crate may depend only on the crates listed for it, whatever the dependency kind.
+cargo metadata --locked --no-deps --format-version 1 | perl -MJSON::PP -e '
+    my %allowed = (
+        zip => [], codec => [], cache => [], config => [],
+        pack => [qw(zip)],
+        graph => [qw(pack)],
+        sources => [qw(graph pack codec)],
+        oracle => [qw(pack graph codec)],
+        pass => [qw(pack graph oracle)],
+        passes => [qw(pass pack graph codec)],
+        report => [qw(pack graph codec)],
+        engine => [qw(zip codec cache config pack graph sources oracle pass passes report)],
+        cli => [qw(engine config)],
+    );
+    my $meta = decode_json(do { local $/; <STDIN> });
+    my $bad = 0;
+    for my $pkg (@{ $meta->{packages} }) {
+        (my $from = $pkg->{name}) =~ s/^packprune-// or next;
+        if (!exists $allowed{$from}) { print "unknown crate $pkg->{name}: add it to the edge table\n"; $bad = 1; next }
+        my %ok = map { $_ => 1 } @{ $allowed{$from} };
+        for my $dep (@{ $pkg->{dependencies} }) {
+            (my $to = $dep->{name}) =~ s/^packprune-// or next;
+            next if $ok{$to};
+            printf "forbidden edge: %s -> %s (%s)\n", $pkg->{name}, $dep->{name}, $dep->{kind} // "normal";
+            $bad = 1;
+        }
+    }
+    exit $bad;
+'
+echo ok
+
+step "golden outputs (fixtures)"
+# Its sound comparator is a package of its own, outside the workspace the steps above lint.
+cargo fmt --check --manifest-path tests/golden/audio/Cargo.toml
+CARGO_TARGET_DIR=${CARGO_TARGET_DIR:-$PWD/target} \
+    cargo clippy --quiet --locked --manifest-path tests/golden/audio/Cargo.toml -- -D warnings
+tests/golden/check
+
+step "config schema drift"
+schema_snapshot=$(mktemp "${TMPDIR:-/tmp}/packprune-schema.XXXXXX")
+trap 'rm -f "$schema_snapshot"' EXIT
+cargo run --quiet --locked -p packprune-cli -- schema > "$schema_snapshot"
+if ! diff -u docs/packprune.schema.json "$schema_snapshot"; then
+    echo 'Config schema changed. Regenerate with: cargo run --quiet --locked -p packprune-cli -- schema > docs/packprune.schema.json' >&2
+    exit 1
+fi

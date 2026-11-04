@@ -1,0 +1,2 @@
+reached assets/fx/textures/loose/kept.png
+orphan assets/fx/textures/loose/dropped.png

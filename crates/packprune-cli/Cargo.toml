@@ -1,0 +1,29 @@
+[package]
+name = "packprune-cli"
+description = "The packprune command line"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "packprune"
+path = "src/main.rs"
+
+[dependencies]
+packprune-engine.workspace = true
+packprune-config.workspace = true
+camino.workspace = true
+clap.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+
+[target.'cfg(target_env = "musl")'.dependencies]
+tikv-jemallocator = "=0.7.0"
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[lints]
+workspace = true

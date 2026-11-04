@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# A dated nightly keeps sanitizer builds reproducible beside the stable PR gate.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+toolchain=nightly-2026-10-29
+rustup toolchain install "$toolchain" --profile minimal --no-self-update
+cargo +"$toolchain" install cargo-fuzz --version '=0.13.2' --locked
+
+targets=$(cargo +"$toolchain" fuzz list)
+if [[ -z "$targets" ]]; then
+    echo 'no fuzz targets found' >&2
+    exit 1
+fi
+
+while IFS= read -r target; do
+    printf '\n== fuzz %s (60 seconds)\n' "$target"
+    cargo +"$toolchain" fuzz run "$target" -- \
+        -max_total_time=60 -timeout=10 -rss_limit_mb=4096 -max_len=65536
+done <<< "$targets"

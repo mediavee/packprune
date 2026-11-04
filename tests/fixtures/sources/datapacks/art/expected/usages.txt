@@ -1,0 +1,7 @@
+sprite | viki:entity/banner/crest | minecraft:banner_patterns | input!data/viki/banner_pattern/crest.json asset_id | 
+sprite | viki:entity/shield/crest | minecraft:shield_patterns | input!data/viki/banner_pattern/crest.json asset_id | 
+sprite | viki:portrait | minecraft:paintings | input!data/viki/painting_variant/portrait.json asset_id | 
+sprite | *:trims/entity/*/*_ruby | minecraft:armor_trims | input!data/viki/trim_material/ruby.json asset_name | 
+sprite | *:trims/entity/*/*_ruby_darker | minecraft:armor_trims | input!data/viki/trim_material/ruby.json override_armor_assets.minecraft:iron | 
+sprite | *:trims/entity/*/*_ruby_dark | minecraft:armor_trims | input!data/viki/trim_material/ruby.json override_armor_assets.minecraft:gold | 
+sprite | viki:trims/entity/*/bolt2_* | minecraft:armor_trims | input!data/viki/trim_pattern/bolt2.json asset_id | 

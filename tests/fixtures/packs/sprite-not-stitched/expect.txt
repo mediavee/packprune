@@ -1,0 +1,2 @@
+orphan assets/fx/textures/custom/gem.png
+not_stitched fx:custom/gem

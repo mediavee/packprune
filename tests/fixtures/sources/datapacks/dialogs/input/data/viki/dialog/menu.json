@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:notice",
+  "title": {"text": "Menu", "font": "viki:dialog_font"},
+  "body": [
+    {"type": "minecraft:plain_message", "contents": {"text": "", "extra": [{"sprite": "item/gem", "atlas": "minecraft:items"}, {"object": "atlas", "sprite": "viki:icons/coin", "atlas": "viki:gui"}]}}
+  ],
+  "action": {"label": {"text": "Close", "font": "minecraft:uniform"}}
+}

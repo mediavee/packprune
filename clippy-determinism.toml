@@ -1,0 +1,7 @@
+# Linked as clippy.toml by the crates whose output must be reproducible: hash iteration order would reach it.
+allow-unwrap-in-tests = true
+allow-expect-in-tests = true
+disallowed-types = [
+    { path = "std::collections::HashMap", reason = "use BTreeMap: iteration order reaches the output" },
+    { path = "std::collections::HashSet", reason = "use BTreeSet: iteration order reaches the output" },
+]

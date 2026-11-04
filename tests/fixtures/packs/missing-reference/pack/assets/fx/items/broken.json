@@ -1,0 +1,1 @@
+{"model": {"type": "minecraft:composite", "models": [{"type": "minecraft:model", "model": "fx:item/broken"}, {"type": "minecraft:model", "model": "fx:item/absent"}]}}

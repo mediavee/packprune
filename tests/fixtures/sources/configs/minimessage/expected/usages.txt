@@ -1,0 +1,7 @@
+font | viki:hud |  | lines.yml:1 greeting <font:viki:hud> | MiniMessage tag
+font | viki:quoted |  | lines.yml:1 greeting <FONT:'viki:quoted'> | MiniMessage tag
+font | minecraft:uniform |  | lines.yml:2 default-ns <font:uniform> | MiniMessage tag
+sprite | minecraft:block/stone | minecraft:blocks | lines.yml:3 sprites <sprite:block/stone> | MiniMessage tag
+sprite | minecraft:item/gem | minecraft:items | lines.yml:3 sprites <sprite:items:item/gem> | MiniMessage tag
+sprite | viki:item/ruby | viki:items | lines.yml:3 sprites <sprite:'viki:items':'viki:item/ruby'/> | MiniMessage tag
+font | <name |  | lines.yml:5 placeholder <font:<name> | unresolvable: placeholder

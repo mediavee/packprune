@@ -1,0 +1,5 @@
+braces: { item-model: "nexo:{model}" }
+percent: { font: "%font%" }
+dollar: { tooltip-style: "${style}" }
+wild: { item-model: "nexo:*{x}" }
+plain: { item-model: "nexo:fine" }

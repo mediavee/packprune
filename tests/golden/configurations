@@ -1,0 +1,26 @@
+# Each configuration a row runs: <name> <packprune optimise options>, paths relative to this directory.
+# `drop-in` runs `packprune <settings.toml>` instead, as Nexo runs PackSquash. `transcode` marks a configuration that
+# re-encodes sounds: its rows compare the decoded sounds within audio-tolerances instead of their sample digests.
+lossless
+none                    --passes none
+degenerate-faces        --passes degenerate-faces
+identical-models        --passes identical-models
+shared-display          --passes shared-display
+identical-sprites       --passes identical-sprites
+animation-frames        --passes animation-frames
+uv-crop                 --passes uv-crop
+overlay-merge           --passes overlay-merge
+short-names             --passes short-names
+atlas-directory         --passes atlas-directory
+short-json              --passes short-json
+uv-crop-particles       --config configs/uv-crop-particles.toml
+texel-downscale         --config configs/texel-downscale.toml
+prune-unnamed-sprites   --config configs/prune-unnamed-sprites.toml
+overlay-floor           --config configs/overlay-floor.toml
+stream-sounds           --config configs/stream-sounds.toml
+stream-sounds-short     --config configs/stream-sounds-short.toml
+sound-mono              transcode --config configs/sound-mono.toml
+sound-mono-q3           transcode --config configs/sound-mono-q3.toml
+sound-rate              transcode --config configs/sound-rate.toml
+sound-rate-22k          transcode --config configs/sound-rate-22k.toml
+drop-in                 drop-in

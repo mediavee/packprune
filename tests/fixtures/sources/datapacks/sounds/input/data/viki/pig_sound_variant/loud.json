@@ -1,0 +1,4 @@
+{
+  "adult_sounds": {"ambient_sound": "viki:pig.a", "hurt_sound": "viki:pig.h", "death_sound": "viki:pig.d", "step_sound": "minecraft:entity.pig.step", "eat_sound": "viki:pig.e"},
+  "baby_sounds": {"ambient_sound": "viki:baby.a", "hurt_sound": "viki:baby.h", "death_sound": "viki:baby.d", "step_sound": "viki:baby.s", "eat_sound": "viki:baby.e"}
+}

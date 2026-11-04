@@ -1,0 +1,1 @@
+{"providers": [{"type": "reference", "id": "fx:include/glyphs"}, {"type": "ttf", "file": "fx:hud.ttf", "size": 11}, {"type": "space", "advances": {" ": 4}}]}

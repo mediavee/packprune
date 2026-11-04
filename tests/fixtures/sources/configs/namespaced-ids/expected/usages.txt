@@ -1,0 +1,3 @@
+item_definition | nexo:alpha |  | Quests/quests.yml:2 reward.material |  | quiet
+item_definition | nexo:beta |  | Quests/quests.yml:3 reward.item-model | 
+sound_event | example:ui.click |  | Quests/quests.yml:8 reward.sound | 

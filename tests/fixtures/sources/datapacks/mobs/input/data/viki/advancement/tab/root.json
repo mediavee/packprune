@@ -1,0 +1,4 @@
+{
+  "criteria": {"x": {"trigger": "minecraft:impossible"}},
+  "display": {"background": "viki:gui/advancements/backgrounds/tab", "icon": {"id": "minecraft:map"}, "title": {"text": "T"}, "description": {"text": "D"}}
+}

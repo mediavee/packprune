@@ -1,0 +1,4 @@
+version = 2
+
+[profiles.default.lossy.sound-rate]
+globs = ["**"]

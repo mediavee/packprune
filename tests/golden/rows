@@ -1,0 +1,38 @@
+# The rows check runs, one pack per line:
+#   <label>  <pack>  <configurations, comma-separated>  [analysis options]
+# Row `<label>.<configuration>`; paths are relative to this directory. `fixtures/` exercise the passes, each in the
+# rows named after it; `../fixtures/` are the analysis fixtures, run for what each prunes.
+models          fixtures/models                         lossless,none,degenerate-faces,identical-models,shared-display,drop-in
+textures        fixtures/textures                       lossless,none,identical-sprites,animation-frames
+crop            fixtures/crop                           lossless,none,uv-crop,uv-crop-particles
+overlays        fixtures/overlays                       lossless,none,overlay-merge,overlay-floor
+names           fixtures/names                          lossless,none,short-names,atlas-directory,drop-in
+json            fixtures/json                           lossless,none,short-json
+lossy           fixtures/lossy                          lossless,none,texel-downscale,prune-unnamed-sprites
+sounds          fixtures/sounds                         lossless,stream-sounds,stream-sounds-short,sound-mono,sound-mono-q3,sound-rate,sound-rate-22k
+keep            ../fixtures/packs/keep-entry/pack       lossless,none --keep ../fixtures/packs/keep-entry/keep.yml
+sources         fixtures/sources/pack                   lossless,none,drop-in --source nexo=fixtures/sources/Nexo --source configs=fixtures/sources/plugins --source datapacks=fixtures/sources/datapacks --prune-unused nexo:items/**
+asset-index     ../fixtures/packs/sound-asset-index/pack lossless --asset-index ../fixtures/packs/sound-asset-index/assets/indexes/test.json
+atlas-filter            ../fixtures/packs/atlas-filter/pack             lossless
+clean                   ../fixtures/packs/clean/pack                    lossless
+dead-blockstate         ../fixtures/packs/dead-blockstate/pack          lossless
+directory-atlas-orphan  ../fixtures/packs/directory-atlas-orphan/pack   lossless
+equipment-layer         ../fixtures/packs/equipment-layer/pack          lossless
+font-reference          ../fixtures/packs/font-reference/pack           lossless
+missing-reference       ../fixtures/packs/missing-reference/pack        lossless
+older-formats           ../fixtures/packs/older-formats/pack            lossless
+overlay-formats         ../fixtures/packs/overlay-formats/pack          lossless
+overlay-only            ../fixtures/packs/overlay-only/pack             lossless
+paletted-permutations   ../fixtures/packs/paletted-permutations/pack    lossless
+server-data-orphans     ../fixtures/packs/server-data-orphans/pack      lossless
+server-named-sprites    ../fixtures/packs/server-named-sprites/pack     lossless
+shader-relative-import  ../fixtures/packs/shader-relative-import/pack   lossless
+sound-event             ../fixtures/packs/sound-event/pack              lossless
+source-usages           ../fixtures/packs/source-usages/pack            lossless
+special-texture         ../fixtures/packs/special-texture/pack          lossless
+sprite-not-stitched     ../fixtures/packs/sprite-not-stitched/pack      lossless
+texture-object          ../fixtures/packs/texture-object/pack           lossless
+unstitch                ../fixtures/packs/unstitch/pack                 lossless
+unused-items            ../fixtures/packs/unused-items/pack             lossless
+vanilla-texture-meta    ../fixtures/packs/vanilla-texture-meta/pack     lossless
+var-through-parent      ../fixtures/packs/var-through-parent/pack       lossless

@@ -1,0 +1,8 @@
+{
+  "icon": {"item_model": "viki:json_icon"},
+  "texts": [
+    {"font": "viki:json_font"},
+    {"font": 7}
+  ],
+  "sound": "viki:json_sound"
+}

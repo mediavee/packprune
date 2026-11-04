@@ -1,0 +1,193 @@
+name: release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  linux:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-musl
+            runner: ubuntu-latest
+          - target: aarch64-unknown-linux-musl
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    container:
+      image: rust:1.99.1-trixie
+      volumes:
+        - packprune-release-registry:/usr/local/cargo/registry
+    env:
+      CARGO_TERM_COLOR: always
+      CC_x86_64_unknown_linux_musl: musl-gcc
+      CC_aarch64_unknown_linux_musl: musl-gcc
+      CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER: musl-gcc
+      CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER: musl-gcc
+      TARGET: ${{ matrix.target }}
+    steps:
+      - run: chown -R "$(stat -c %u:%g "$RUNNER_TEMP")" "$GITHUB_WORKSPACE"
+      - uses: actions/checkout@v7
+      - name: Toolchain
+        run: |
+          grep -qx "channel = \"$(rustc --version | cut -d' ' -f2)\"" rust-toolchain.toml
+          case "$TARGET:$(uname -m)" in
+            x86_64-unknown-linux-musl:x86_64|aarch64-unknown-linux-musl:aarch64) ;;
+            *) echo 'The release runner must match the target architecture' >&2; exit 1 ;;
+          esac
+          apt-get update
+          apt-get install -y --no-install-recommends musl-tools file binutils
+          rustup target add "$TARGET"
+      - name: Release gate
+        if: ${{ matrix.target == 'x86_64-unknown-linux-musl' }}
+        shell: bash
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          rustup component add rustfmt clippy
+          scripts/install-cargo-deny
+          mkdir -p "$RUNNER_TEMP/packprune-home"
+          HOME="$RUNNER_TEMP/packprune-home" scripts/check
+      - name: Build
+        run: cargo build --release --locked -p packprune-cli --target "$TARGET"
+      - name: Verify static binary and run
+        run: |
+          binary="target/$TARGET/release/packprune"
+          file "$binary" | tee "$RUNNER_TEMP/binary-type"
+          case "$TARGET" in
+            x86_64-unknown-linux-musl) grep -q 'static-pie linked' "$RUNNER_TEMP/binary-type" ;;
+            aarch64-unknown-linux-musl) grep -Eq 'statically linked|static-pie linked' "$RUNNER_TEMP/binary-type" ;;
+          esac
+          if readelf -l "$binary" | grep -q INTERP || readelf -d "$binary" | grep -q NEEDED; then
+            echo 'The Linux release must have no dynamic loader or shared libraries' >&2
+            exit 1
+          fi
+          scripts/check-release-version "$binary"
+          mkdir -p dist
+          cp "$binary" "dist/packprune-$TARGET"
+          (cd dist && sha256sum "packprune-$TARGET" > "packprune-$TARGET.sha256")
+      - name: Licence notices
+        if: ${{ matrix.target == 'x86_64-unknown-linux-musl' }}
+        run: |
+          scripts/install-cargo-about
+          cargo about generate --locked --fail -c scripts/about.toml -m crates/packprune-cli/Cargo.toml \
+            scripts/about.hbs -o dist/THIRD-PARTY-LICENSES.txt
+          cp LICENSE dist/LICENSE
+      - uses: actions/upload-artifact@v4
+        with:
+          name: binary-${{ matrix.target }}
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 7
+      - if: ${{ always() }}
+        run: |
+          rm -rf target
+          chown -R "$(stat -c %u:%g "$RUNNER_TEMP")" "$GITHUB_WORKSPACE"
+
+  desktop:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: aarch64-apple-darwin
+            runner: macos-15
+            arch: ARM64
+            extension: ''
+          - target: x86_64-apple-darwin
+            runner: macos-15-intel
+            arch: X64
+            extension: ''
+          - target: x86_64-pc-windows-msvc
+            runner: windows-2025
+            arch: X64
+            extension: .exe
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    defaults:
+      run:
+        shell: bash
+    env:
+      CARGO_TERM_COLOR: always
+      TARGET: ${{ matrix.target }}
+      EXTENSION: ${{ matrix.extension }}
+      RUSTFLAGS: ${{ matrix.extension == '.exe' && '-C target-feature=+crt-static' || '' }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Toolchain
+        env:
+          EXPECTED_ARCH: ${{ matrix.arch }}
+        run: |
+          test "$RUNNER_ARCH" = "$EXPECTED_ARCH"
+          version=$(sed -n 's/^channel = "\([^"]*\)"/\1/p' rust-toolchain.toml)
+          test -n "$version"
+          rustup toolchain install "$version" --profile minimal --target "$TARGET"
+      - name: Build and run
+        run: |
+          cargo build --release --locked -p packprune-cli --target "$TARGET"
+          binary="target/$TARGET/release/packprune$EXTENSION"
+          scripts/check-release-version "$binary"
+          mkdir -p dist
+          cp "$binary" "dist/packprune-$TARGET$EXTENSION"
+          cd dist
+          if [ "$RUNNER_OS" = macOS ]; then
+            shasum -a 256 "packprune-$TARGET$EXTENSION" > "packprune-$TARGET$EXTENSION.sha256"
+          else
+            sha256sum "packprune-$TARGET$EXTENSION" > "packprune-$TARGET$EXTENSION.sha256"
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: binary-${{ matrix.target }}
+          path: dist/packprune-*
+          if-no-files-found: error
+          retention-days: 7
+      - if: ${{ always() }}
+        run: rm -rf target
+
+  publish:
+    needs: [linux, desktop]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - name: Prepare artifacts
+        run: rm -rf dist
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: binary-*
+          merge-multiple: true
+          path: dist
+      - name: Verify complete release and checksum
+        working-directory: dist
+        run: |
+          test "$(find . -maxdepth 1 -type f | wc -l)" -eq 12
+          test -s LICENSE
+          test -s THIRD-PARTY-LICENSES.txt
+          for target in x86_64-unknown-linux-musl aarch64-unknown-linux-musl aarch64-apple-darwin x86_64-apple-darwin x86_64-pc-windows-msvc.exe; do
+            test -s "packprune-$target"
+            sha256sum --strict --check "packprune-$target.sha256"
+          done
+          cat packprune-*.sha256 > SHA256SUMS
+          rm -- packprune-*.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: packprune-release
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 7
+      - name: Publish tag
+        if: ${{ github.event_name == 'push' && !endsWith(github.ref_name, '-dry-run') }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: gh release create "$TAG" dist/* --verify-tag --title "$TAG" --generate-notes

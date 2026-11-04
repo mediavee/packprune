@@ -1,0 +1,21 @@
+reached assets/minecraft/items/red_mushroom.json
+reached new_b/assets/minecraft/items/red_mushroom.json
+reached assets/fx/models/item/mushroom_old.json
+reached assets/fx/models/item/head.json
+reached assets/fx/models/item/head_new.json
+reached old_a/assets/minecraft/atlases/items.json
+reached assets/fx/textures/legacy/icon.png
+reached old_a/assets/minecraft/shaders/core/rendertype_text.vsh
+reached assets/fx/shaders/include/old_lib.glsl
+reached assets/minecraft/blockstates/tripwire.json
+reached new_b/assets/minecraft/blockstates/tripwire.json
+reached older_c/assets/minecraft/blockstates/tripwire.json
+orphan assets/minecraft/blockstates/stone.json
+reached everywhere/assets/minecraft/blockstates/stone.json
+dead_blockstate assets/fx/blockstates/custom.json
+root unverified_format_vanilla old_a/assets/minecraft/textures/item/empty_armor_slot_boots.png
+root unverified_format_vanilla assets/minecraft/textures/misc/legacy_overlay.png
+root unverified_format_shader assets/fx/shaders/include/next_lib.glsl
+orphan assets/fx/textures/legacy/unused.png
+missing assets/fx/models/item/absent_new.json
+other_missing assets/fx/models/item/absent_legacy.json

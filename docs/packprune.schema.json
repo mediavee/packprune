@@ -1,0 +1,444 @@
+{
+  "$defs": {
+    "Budgets": {
+      "additionalProperties": false,
+      "properties": {
+        "atlas_gpu_mib": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "font_mib": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "zip_bytes": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "Cache": {
+      "additionalProperties": false,
+      "properties": {
+        "dir": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "max_bytes": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "Input": {
+      "additionalProperties": false,
+      "properties": {
+        "limits": {
+          "$ref": "#/$defs/InputLimits"
+        }
+      },
+      "type": "object"
+    },
+    "InputLimits": {
+      "additionalProperties": false,
+      "description": "Overrides of the reader's limits; an absent key keeps its default.",
+      "properties": {
+        "max_entries": {
+          "format": "uint32",
+          "minimum": 1,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "max_entry_bytes": {
+          "format": "uint64",
+          "minimum": 1,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "max_ratio": {
+          "format": "uint32",
+          "minimum": 1,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "max_total_bytes": {
+          "format": "uint64",
+          "minimum": 1,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "ratio_min_entry_bytes": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "Lossy": {
+      "additionalProperties": true,
+      "description": "A lossy pass is off unless its table exists; its globs are required.",
+      "properties": {
+        "globs": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "type": "array"
+        },
+        "max_loss": {
+          "additionalProperties": false,
+          "minProperties": 1,
+          "properties": {
+            "lsd_max": {
+              "minimum": 0.0,
+              "type": "number"
+            },
+            "max_channel_delta": {
+              "maximum": 255.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            "snr_min": {
+              "type": "number"
+            },
+            "ssim_min": {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            }
+          },
+          "type": "object"
+        }
+      },
+      "required": [
+        "globs"
+      ],
+      "type": "object"
+    },
+    "Override": {
+      "additionalProperties": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "description": "Per glob, in order: the first that sets an option for the file's kind wins.",
+      "properties": {
+        "glob": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "glob"
+      ],
+      "type": "object"
+    },
+    "PassSelection": {
+      "anyOf": [
+        {
+          "description": "`\"lossless\"` or `\"none\"`.",
+          "enum": [
+            "lossless",
+            "none"
+          ],
+          "type": "string"
+        },
+        {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      ]
+    },
+    "Profile": {
+      "additionalProperties": false,
+      "properties": {
+        "disable": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "inherits": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "keep_mod_files": {
+          "default": [],
+          "items": {
+            "enum": [
+              "optifine",
+              "mtr3"
+            ],
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "lossy": {
+          "additionalProperties": {
+            "$ref": "#/$defs/Lossy"
+          },
+          "type": "object"
+        },
+        "oldest_format": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "override": {
+          "items": {
+            "$ref": "#/$defs/Override"
+          },
+          "type": "array"
+        },
+        "passes": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PassSelection"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "threads": {
+          "format": "uint32",
+          "minimum": 1,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "zip": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Zip"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "Report": {
+      "additionalProperties": false,
+      "description": "Where the PackSquash drop-in keeps its report.",
+      "properties": {
+        "dir": {
+          "description": "The report of the last run is the folder `latest` in it, its files replaced by name at each run and nothing\nelse touched. Relative to this file; `reports` when absent.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "Sources": {
+      "additionalProperties": false,
+      "properties": {
+        "configs": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "datapacks": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "keep": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "nexo": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "prune_unused": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
+    "Vanilla": {
+      "additionalProperties": false,
+      "properties": {
+        "asset_index": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "client_jar": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "Zip": {
+      "additionalProperties": false,
+      "properties": {
+        "allow": {
+          "default": [],
+          "items": {
+            "enum": [
+              "lean"
+            ],
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "comment": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "effort": {
+          "anyOf": [
+            {
+              "maximum": 255,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "enum": [
+                "max"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "0 stores, 1 to 254 deflate with libdeflate, 255 or `\"max\"` also tries Zopfli on text."
+        },
+        "mode": {
+          "anyOf": [
+            {
+              "enum": [
+                "conformant",
+                "lean"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "recompress_compressed": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "mode",
+        "effort"
+      ],
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "budgets": {
+      "$ref": "#/$defs/Budgets"
+    },
+    "cache": {
+      "$ref": "#/$defs/Cache"
+    },
+    "input": {
+      "$ref": "#/$defs/Input"
+    },
+    "profile": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "profiles": {
+      "additionalProperties": {
+        "$ref": "#/$defs/Profile"
+      },
+      "type": "object"
+    },
+    "report": {
+      "$ref": "#/$defs/Report"
+    },
+    "sources": {
+      "$ref": "#/$defs/Sources"
+    },
+    "vanilla": {
+      "$ref": "#/$defs/Vanilla"
+    },
+    "version": {
+      "format": "uint32",
+      "maximum": 2,
+      "minimum": 2,
+      "type": "integer"
+    }
+  },
+  "required": [
+    "version"
+  ],
+  "title": "Config",
+  "type": "object"
+}

@@ -1,0 +1,35 @@
+# Vanilla 26.2 files no pack file references: the client's code loads them by name, or nothing loads them at all.
+# The vanilla self-test roots these and requires every other vanilla model and texture to be reached through the
+# graph. Each pattern must match at least one file, so a stale line fails the test. Checked against the 26.2 client
+# (classes decompiled with Vineflower, assets read from the jar).
+
+# Entity renderers and model layers name their textures in code (EntityRenderer#getTextureLocation, Sheets).
+assets/minecraft/textures/entity/**
+# Screens, HUD and widgets: GUI sprites by id (gui atlas, directory gui/sprites), the rest as full paths.
+assets/minecraft/textures/gui/**
+# gui atlas, directory mob_effect: one sprite per MobEffect registry entry.
+assets/minecraft/textures/mob_effect/**
+# map_decorations atlas: one sprite per MapDecorationType.
+assets/minecraft/textures/map/**
+# celestials atlas (sun, moon phases, end flash): LevelRenderer and SkyRenderer.
+assets/minecraft/textures/environment/**
+# paintings atlas: painting_variant asset ids come from the data-pack registry.
+assets/minecraft/textures/painting/**
+# Vignette, pumpkin blur, glint, spyglass, world border, pack icons: ScreenEffectRenderer, Gui, WorldBorderRenderer.
+assets/minecraft/textures/misc/**
+# GrassColorReloadListener, FoliageColorReloadListener, DryFoliageColorReloadListener.
+assets/minecraft/textures/colormap/**
+# ModelBakery.DESTRUCTION_STAGES (block breaking overlay).
+assets/minecraft/textures/block/destroy_stage_*.png
+# FluidStateModelSet: flowing water and lava, and the water overlay next to glass.
+assets/minecraft/textures/block/water_flow.png
+assets/minecraft/textures/block/water_overlay.png
+assets/minecraft/textures/block/lava_flow.png
+
+# Leftovers: no class, model, atlas, particle or post effect of 26.2 names these.
+assets/minecraft/textures/block/bell_side.png
+assets/minecraft/textures/block/bell_top.png
+assets/minecraft/textures/block/debug.png
+assets/minecraft/textures/block/debug2.png
+assets/minecraft/textures/effect/dither.png
+assets/minecraft/textures/particle/goldheart_*.png

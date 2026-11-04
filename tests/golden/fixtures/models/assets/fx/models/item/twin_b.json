@@ -1,0 +1,2 @@
+{ "elements": [{"faces": {"south": {"texture": "#a"}, "north": {"texture": "#a"}}, "to": [16, 16, 16], "from": [0, 0, 0]}],
+  "textures": {"a": "fx:item/a"} }

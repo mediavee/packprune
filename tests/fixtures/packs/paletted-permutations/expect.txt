@@ -1,0 +1,3 @@
+reached assets/fx/textures/trim/base.png
+reached assets/fx/textures/trim/key.png
+reached assets/fx/textures/trim/red.png

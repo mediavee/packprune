@@ -1,0 +1,329 @@
+{
+  "schema": 4,
+  "tool": {
+    "name": "packprune",
+    "version": "test"
+  },
+  "inputs": {
+    "pack": {
+      "name": "pack",
+      "sha256": "19ee9f8e1cb1c632dd98350ac845db8648f93ccccab5771d41479f14d78e7690"
+    },
+    "clientJar": {
+      "name": "client.jar",
+      "sha256": "8320c4a70697c8a5f963c54722b822a17e5e38b5761f50738c2f1f6495ac8839"
+    },
+    "clientVersion": "26.2",
+    "clientRules": "26.2",
+    "assetIndex": {
+      "name": "none",
+      "sha256": ""
+    }
+  },
+  "views": [
+    {
+      "id": "base",
+      "format": "88.0",
+      "overlays": [ ],
+      "verified": true
+    }
+  ],
+  "summary": {
+    "files": 21,
+    "bytes": 1110,
+    "reached": 12,
+    "orphans": 0,
+    "orphanBytes": 0,
+    "atlasLoadedOrphans": 1,
+    "atlasLoadedOrphanBytes": 10,
+    "unused": 8,
+    "unusedBytes": 414,
+    "deadBlockstates": 0,
+    "missing": 0,
+    "notStitched": 0,
+    "otherFormatsMissing": 0,
+    "otherFormatsNotStitched": 0,
+    "unknown": 0,
+    "invalid": 0,
+    "unmatchedUsages": 0
+  },
+  "byKind": [
+    {
+      "kind": "pack_meta",
+      "files": 1,
+      "bytes": 73,
+      "reached": 1,
+      "unreached": 0,
+      "unreachedBytes": 0
+    },
+    {
+      "kind": "item_definition",
+      "files": 7,
+      "bytes": 454,
+      "reached": 4,
+      "unreached": 3,
+      "unreachedBytes": 195
+    },
+    {
+      "kind": "model",
+      "files": 6,
+      "bytes": 367,
+      "reached": 4,
+      "unreached": 2,
+      "unreachedBytes": 181
+    },
+    {
+      "kind": "texture",
+      "files": 6,
+      "bytes": 68,
+      "reached": 2,
+      "unreached": 4,
+      "unreachedBytes": 48
+    },
+    {
+      "kind": "atlas",
+      "files": 1,
+      "bytes": 148,
+      "reached": 1,
+      "unreached": 0,
+      "unreachedBytes": 0
+    }
+  ],
+  "orphans": [ ],
+  "atlasLoadedOrphans": [
+    {
+      "path": "assets/fx/textures/item/loose.png",
+      "kind": "texture",
+      "bytes": 10,
+      "atlases": [
+        "minecraft:items"
+      ]
+    }
+  ],
+  "deadBlockstates": [ ],
+  "removable": [
+    "assets/fx/items/dropped.json",
+    "assets/fx/items/twin_a.json",
+    "assets/fx/items/twin_b.json",
+    "assets/fx/models/item/dropped.json",
+    "assets/fx/models/item/twin.json",
+    "assets/fx/textures/item/dropped.png",
+    "assets/fx/textures/item/dropped_icon.png",
+    "assets/fx/textures/item/twin.png"
+  ],
+  "missing": [ ],
+  "notStitched": [ ],
+  "otherFormats": {
+    "missing": [ ],
+    "notStitched": [ ]
+  },
+  "unknown": [ ],
+  "invalid": [ ],
+  "sources": [
+    {
+      "id": "lines",
+      "inputs": [
+        {
+          "name": "usages.txt",
+          "sha256": "1ab0ec3d70a55f77b938d57309f5faf6aea99622486ef5dcf84b6af5bf0ff654"
+        }
+      ],
+      "usages": 1,
+      "matched": 1,
+      "vanilla": 0,
+      "unmatched": [ ]
+    },
+    {
+      "id": "generator",
+      "inputs": [
+        {
+          "name": "generator.txt",
+          "sha256": "b8f2bf298a063c28a1e32b0b338be64596614303c227cc0934227d8f92f002f3"
+        }
+      ],
+      "usages": 10,
+      "matched": 10,
+      "vanilla": 0,
+      "unmatched": [ ]
+    }
+  ],
+  "sourceRoots": [
+    {
+      "path": "assets/fx/items/claimed.json",
+      "usages": [
+        {
+          "source": "generator",
+          "location": "generator.txt:9",
+          "reason": "",
+          "kind": "item_definition",
+          "id": "fx:claimed",
+          "atlas": ""
+        },
+        {
+          "source": "generator",
+          "location": "generator.txt:10",
+          "reason": "",
+          "kind": "item_definition",
+          "id": "fx:claimed",
+          "atlas": ""
+        }
+      ]
+    },
+    {
+      "path": "assets/fx/items/kept.json",
+      "usages": [
+        {
+          "source": "lines",
+          "location": "usages.txt:1",
+          "reason": "",
+          "kind": "item_definition",
+          "id": "fx:kept",
+          "atlas": ""
+        },
+        {
+          "source": "generator",
+          "location": "generator.txt:1",
+          "reason": "",
+          "kind": "item_definition",
+          "id": "fx:kept",
+          "atlas": ""
+        }
+      ]
+    },
+    {
+      "path": "assets/fx/items/other.json",
+      "usages": [
+        {
+          "source": "generator",
+          "location": "generator.txt:8",
+          "reason": "",
+          "kind": "item_definition",
+          "id": "fx:other",
+          "atlas": ""
+        }
+      ]
+    },
+    {
+      "path": "assets/fx/models/item/kept.json",
+      "usages": [
+        {
+          "source": "generator",
+          "location": "generator.txt:2",
+          "reason": "",
+          "kind": "model",
+          "id": "fx:item/kept",
+          "atlas": ""
+        }
+      ]
+    }
+  ],
+  "unusedItems": [
+    {
+      "selector": "generator:items/**",
+      "searched": [
+        "generator",
+        "lines"
+      ],
+      "folders": [
+        {
+          "folder": "generator:items/",
+          "items": 3,
+          "files": 6,
+          "bytes": 326
+        }
+      ],
+      "unused": [
+        {
+          "declaration": "generator:items/main.yml:10",
+          "definitions": [
+            "assets/fx/items/twin_b.json"
+          ],
+          "files": [
+            "assets/fx/items/twin_b.json"
+          ],
+          "bytes": 64
+        },
+        {
+          "declaration": "generator:items/main.yml:4",
+          "definitions": [
+            "assets/fx/items/dropped.json"
+          ],
+          "files": [
+            "assets/fx/items/dropped.json",
+            "assets/fx/models/item/dropped.json",
+            "assets/fx/textures/item/dropped.png",
+            "assets/fx/textures/item/dropped_icon.png"
+          ],
+          "bytes": 198
+        },
+        {
+          "declaration": "generator:items/main.yml:8",
+          "definitions": [
+            "assets/fx/items/twin_a.json"
+          ],
+          "files": [
+            "assets/fx/items/twin_a.json"
+          ],
+          "bytes": 64
+        }
+      ],
+      "kept": [
+        {
+          "declaration": "generator:items/main.yml:1",
+          "definitions": [
+            "assets/fx/items/kept.json"
+          ],
+          "usedBy": [
+            {
+              "source": "lines",
+              "location": "usages.txt:1",
+              "reason": "",
+              "kind": "item_definition",
+              "id": "fx:kept",
+              "atlas": ""
+            }
+          ]
+        },
+        {
+          "declaration": "generator:items/main.yml:12",
+          "definitions": [
+            "assets/fx/items/claimed.json"
+          ],
+          "usedBy": [
+            {
+              "source": "generator",
+              "location": "generator.txt:10",
+              "reason": "",
+              "kind": "item_definition",
+              "id": "fx:claimed",
+              "atlas": ""
+            }
+          ]
+        }
+      ],
+      "shared": [
+        {
+          "path": "assets/fx/models/item/twin.json",
+          "bytes": 79,
+          "declarations": [
+            "generator:items/main.yml:10",
+            "generator:items/main.yml:8"
+          ]
+        },
+        {
+          "path": "assets/fx/textures/item/twin.png",
+          "bytes": 9,
+          "declarations": [
+            "generator:items/main.yml:10",
+            "generator:items/main.yml:8"
+          ]
+        }
+      ]
+    }
+  ],
+  "warnings": [
+    "No world, player or database data is read: an item that exists only there looks unused, and once dropped it shows the missing model until the next build, its data untouched. Keep it with a keep-list entry or a source that names it.",
+    "no asset index: minecraft: sound files and events the pack does not define are assumed vanilla, and every file under minecraft:sounds/ is kept",
+    "no source reads data packs or item components: textures only they name (entity variants, camera overlays, trims, banners) look like orphans here; keep-list them"
+  ]
+}

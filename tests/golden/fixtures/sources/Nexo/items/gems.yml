@@ -1,0 +1,11 @@
+used_gem:
+  material: EMERALD
+  Pack:
+    model: fx:item/used_gem
+    parent_model: fx:item/blade
+
+spare_gem:
+  material: EMERALD
+  Pack:
+    model: fx:item/spare_gem
+    parent_model: fx:item/blade

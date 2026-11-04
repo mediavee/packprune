@@ -1,0 +1,1 @@
+{"long":{"sounds":[{"name":"fx:long","stream":true},{"name":"fx:long","stream":true,"volume":0.5}]},"short":{"sounds":[{"name":"fx:short","stream":true}]},"blip":{"sounds":["fx:blip"]},"fast":{"sounds":[{"name":"fx:fast","pitch":1.5,"stream":true}]}}

@@ -1,0 +1,10 @@
+items/main.yml:1 item_definition fx:kept
+items/main.yml:1 model fx:item/kept
+items/main.yml:4 item_definition fx:dropped
+items/main.yml:4 model fx:item/dropped
+items/main.yml:4 sprite fx:item/dropped_icon minecraft:items
+items/main.yml:8 item_definition fx:twin_a
+items/main.yml:10 item_definition fx:twin_b
+other/other.yml:1 item_definition fx:other
+items/main.yml:12 item_definition fx:claimed
+other/other.yml:5 item_definition fx:claimed

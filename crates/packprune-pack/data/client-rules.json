@@ -1,0 +1,22 @@
+{
+  "26.2": {
+    "missing_sprite": "minecraft:missingno",
+    "builtin_model_prefix": "builtin/",
+    "model_atlases": ["minecraft:blocks", "minecraft:items"],
+    "particle_atlases": ["minecraft:particles"],
+    "waypoint_sprites": {"atlases": ["minecraft:gui"], "prefix": "hud/locator_bar_dot/"},
+    "post_effect_textures": {"folder": "textures/effect", "suffix": ".png"},
+    "shader_includes": {"folder": "shaders/include", "suffix": ""},
+    "equipment_textures": {"folder": "textures/entity/equipment", "suffix": ".png"},
+    "tooltip_sprites": [
+      {"atlases": ["minecraft:gui"], "prefix": "tooltip/", "suffix": "_background"},
+      {"atlases": ["minecraft:gui"], "prefix": "tooltip/", "suffix": "_frame"}
+    ],
+    "special_textures": {
+      "minecraft:chest": {"atlases": ["minecraft:chests"], "prefix": "entity/chest/"},
+      "minecraft:shulker_box": {"atlases": ["minecraft:shulker_boxes"], "prefix": "entity/shulker/"},
+      "minecraft:head": {"folder": "textures/entity", "suffix": ".png"},
+      "minecraft:copper_golem_statue": {"folder": "", "suffix": ""}
+    }
+  }
+}

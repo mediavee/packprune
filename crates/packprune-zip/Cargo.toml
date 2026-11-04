@@ -1,0 +1,26 @@
+[package]
+name = "packprune-zip"
+description = "Zip reader with limits, deterministic zip writer, compression backends, conformance modes"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+camino.workspace = true
+crc32fast.workspace = true
+flate2.workspace = true
+libdeflater.workspace = true
+memmap2.workspace = true
+rayon.workspace = true
+sha1.workspace = true
+thiserror.workspace = true
+zip.workspace = true
+zopfli.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[lints]
+workspace = true

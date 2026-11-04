@@ -1,0 +1,1 @@
+{"parent": "fx:item/no_parent", "textures": {"layer0": "minecraft:block/stone", "layer1": "minecraft:block/no_such", "layer2": "Bad Id"}}

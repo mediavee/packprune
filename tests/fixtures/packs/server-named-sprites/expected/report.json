@@ -1,0 +1,120 @@
+{
+  "schema": 4,
+  "tool": {
+    "name": "packprune",
+    "version": "test"
+  },
+  "inputs": {
+    "pack": {
+      "name": "pack",
+      "sha256": "7db9c92e304c1e4c99708ad2d77f5cd6648227731d76905fb0d7c21f47790c8c"
+    },
+    "clientJar": {
+      "name": "client.jar",
+      "sha256": "8320c4a70697c8a5f963c54722b822a17e5e38b5761f50738c2f1f6495ac8839"
+    },
+    "clientVersion": "26.2",
+    "clientRules": "26.2",
+    "assetIndex": {
+      "name": "none",
+      "sha256": ""
+    }
+  },
+  "views": [
+    {
+      "id": "base",
+      "format": "88.0",
+      "overlays": [ ],
+      "verified": true
+    }
+  ],
+  "summary": {
+    "files": 5,
+    "bytes": 105,
+    "reached": 1,
+    "orphans": 0,
+    "orphanBytes": 0,
+    "atlasLoadedOrphans": 4,
+    "atlasLoadedOrphanBytes": 32,
+    "unused": 0,
+    "unusedBytes": 0,
+    "deadBlockstates": 0,
+    "missing": 0,
+    "notStitched": 0,
+    "otherFormatsMissing": 0,
+    "otherFormatsNotStitched": 0,
+    "unknown": 0,
+    "invalid": 0,
+    "unmatchedUsages": 0
+  },
+  "byKind": [
+    {
+      "kind": "pack_meta",
+      "files": 1,
+      "bytes": 73,
+      "reached": 1,
+      "unreached": 0,
+      "unreachedBytes": 0
+    },
+    {
+      "kind": "texture",
+      "files": 4,
+      "bytes": 32,
+      "reached": 0,
+      "unreached": 4,
+      "unreachedBytes": 32
+    }
+  ],
+  "orphans": [ ],
+  "atlasLoadedOrphans": [
+    {
+      "path": "assets/fx/textures/block/icon_ruby.png",
+      "kind": "texture",
+      "bytes": 8,
+      "atlases": [
+        "minecraft:blocks"
+      ]
+    },
+    {
+      "path": "assets/fx/textures/gui/sprites/tooltip/rare_background.png",
+      "kind": "texture",
+      "bytes": 8,
+      "atlases": [
+        "minecraft:gui"
+      ]
+    },
+    {
+      "path": "assets/fx/textures/gui/sprites/tooltip/rare_frame.png",
+      "kind": "texture",
+      "bytes": 8,
+      "atlases": [
+        "minecraft:gui"
+      ]
+    },
+    {
+      "path": "assets/fx/textures/painting/sunset.png",
+      "kind": "texture",
+      "bytes": 8,
+      "atlases": [
+        "minecraft:paintings"
+      ]
+    }
+  ],
+  "deadBlockstates": [ ],
+  "removable": [ ],
+  "missing": [ ],
+  "notStitched": [ ],
+  "otherFormats": {
+    "missing": [ ],
+    "notStitched": [ ]
+  },
+  "unknown": [ ],
+  "invalid": [ ],
+  "sources": [ ],
+  "sourceRoots": [ ],
+  "unusedItems": [ ],
+  "warnings": [
+    "no asset index: minecraft: sound files and events the pack does not define are assumed vanilla, and every file under minecraft:sounds/ is kept",
+    "no source reads data packs or item components: textures only they name (entity variants, camera overlays, trims, banners) look like orphans here; keep-list them"
+  ]
+}

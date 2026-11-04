@@ -1,0 +1,3 @@
+# The tolerances of golden-audio: about ten times the largest difference measured between the same encoder's outputs
+# on macOS arm64, Linux arm64 and Linux x86_64 (README.md, "Sounds").
+--max-frames 0 --max-rms-db 0.05 --max-lsd 0.5 --max-loss-delta 0.1 --max-median-rms-db 0.02 --max-median-loss-delta 0.05

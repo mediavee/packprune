@@ -1,0 +1,4 @@
+reached assets/other/sounds/hit.ogg
+reached assets/fx/sounds/ui/click.ogg
+orphan assets/fx/sounds/unused.ogg
+missing other:nope

@@ -1,0 +1,1 @@
+{"pack":{"pack_format":15,"supported_formats":[15,90]},"overlays":{"entries":[{"formats":[18,40],"directory":"a"},{"formats":{"min_inclusive":30,"max_inclusive":50},"directory":"b"},{"min_format":[42,1],"max_format":88,"directory":"c"},{"formats":88,"directory":"d"}]}}

@@ -1,0 +1,769 @@
+{
+  "schema": 4,
+  "tool": {
+    "name": "packprune",
+    "version": "test"
+  },
+  "inputs": {
+    "pack": {
+      "name": "built",
+      "sha256": "af90b46201640e49be6aa48d11843941cd8c5d886b3c4bca76d2ef042d64511f"
+    },
+    "clientJar": {
+      "name": "client.jar",
+      "sha256": "8320c4a70697c8a5f963c54722b822a17e5e38b5761f50738c2f1f6495ac8839"
+    },
+    "clientVersion": "26.2",
+    "clientRules": "26.2",
+    "assetIndex": {
+      "name": "none",
+      "sha256": ""
+    }
+  },
+  "views": [
+    {
+      "id": "base",
+      "format": "88.0",
+      "overlays": [ ],
+      "verified": true
+    }
+  ],
+  "summary": {
+    "files": 25,
+    "bytes": 1211,
+    "reached": 25,
+    "orphans": 0,
+    "orphanBytes": 0,
+    "atlasLoadedOrphans": 0,
+    "atlasLoadedOrphanBytes": 0,
+    "unused": 0,
+    "unusedBytes": 0,
+    "deadBlockstates": 0,
+    "missing": 0,
+    "notStitched": 0,
+    "otherFormatsMissing": 0,
+    "otherFormatsNotStitched": 0,
+    "unknown": 0,
+    "invalid": 0,
+    "unmatchedUsages": 51
+  },
+  "byKind": [
+    {
+      "kind": "pack_meta",
+      "files": 1,
+      "bytes": 72,
+      "reached": 1,
+      "unreached": 0,
+      "unreachedBytes": 0
+    },
+    {
+      "kind": "item_definition",
+      "files": 9,
+      "bytes": 549,
+      "reached": 9,
+      "unreached": 0,
+      "unreachedBytes": 0
+    },
+    {
+      "kind": "model",
+      "files": 3,
+      "bytes": 234,
+      "reached": 3,
+      "unreached": 0,
+      "unreachedBytes": 0
+    },
+    {
+      "kind": "texture",
+      "files": 5,
+      "bytes": 15,
+      "reached": 5,
+      "unreached": 0,
+      "unreachedBytes": 0
+    },
+    {
+      "kind": "equipment",
+      "files": 1,
+      "bytes": 101,
+      "reached": 1,
+      "unreached": 0,
+      "unreachedBytes": 0
+    },
+    {
+      "kind": "font",
+      "files": 2,
+      "bytes": 34,
+      "reached": 2,
+      "unreached": 0,
+      "unreachedBytes": 0
+    },
+    {
+      "kind": "sounds_json",
+      "files": 1,
+      "bytes": 197,
+      "reached": 1,
+      "unreached": 0,
+      "unreachedBytes": 0
+    },
+    {
+      "kind": "sound",
+      "files": 3,
+      "bytes": 9,
+      "reached": 3,
+      "unreached": 0,
+      "unreachedBytes": 0
+    }
+  ],
+  "orphans": [ ],
+  "atlasLoadedOrphans": [ ],
+  "deadBlockstates": [ ],
+  "removable": [ ],
+  "missing": [ ],
+  "notStitched": [ ],
+  "otherFormats": {
+    "missing": [ ],
+    "notStitched": [ ]
+  },
+  "unknown": [ ],
+  "invalid": [ ],
+  "sources": [
+    {
+      "id": "nexo",
+      "inputs": [
+        {
+          "name": "items",
+          "sha256": "8fbe8ec8698e2dc19a791e29a73e5e91d569bb3d01a31abfccc98dae07f8936d"
+        },
+        {
+          "name": "glyphs",
+          "sha256": "c15013663b0ff8bc7f4b8aa43f072084aada4659919ebba0f6c36e5f095fae07"
+        },
+        {
+          "name": "sounds.yml",
+          "sha256": "b5210a05d8415084d026e682e73f4a7e5b7fb009c6f5de35ea6769c3abee18e8"
+        },
+        {
+          "name": "settings.yml",
+          "sha256": "5e468fb01628a97f7f2e776e1d1e934dbef65b1adc8931d0e38fd69b49235f6a"
+        }
+      ],
+      "usages": 69,
+      "matched": 18,
+      "vanilla": 0,
+      "unmatched": [
+        {
+          "source": "nexo",
+          "location": "items/armor.yml:4",
+          "reason": "item ruby_helmet Pack.texture",
+          "kind": "sprite",
+          "id": "fx:item/ruby_helmet",
+          "atlas": ""
+        },
+        {
+          "source": "nexo",
+          "location": "items/armor.yml:9",
+          "reason": "item ruby_helmet Components.equippable.camera_overlay",
+          "kind": "sprite",
+          "id": "fx:misc/ruby_blur",
+          "atlas": ""
+        },
+        {
+          "source": "nexo",
+          "location": "items/armor.yml:10",
+          "reason": "item ruby_helmet Components.equippable.equip_sound",
+          "kind": "sound_event",
+          "id": "fx:ruby.equip",
+          "atlas": ""
+        },
+        {
+          "source": "nexo",
+          "location": "items/armor.yml:1",
+          "reason": "item ruby_helmet: the definition Nexo generates for it",
+          "kind": "item_definition",
+          "id": "nexo:ruby_helmet",
+          "atlas": ""
+        },
+        {
+          "source": "nexo",
+          "location": "items/armor.yml:13",
+          "reason": "item ruby_helmet CustomArmor.layer1",
+          "kind": "sprite",
+          "id": "fx:armor/ruby_1",
+          "atlas": ""
+        },
+        {
+          "source": "nexo",
+          "location": "items/armor.yml:14",
+          "reason": "item ruby_helmet CustomArmor.layer2",
+          "kind": "sprite",
+          "id": "fx:armor/ruby_2",
+          "atlas": ""
+        },
+        {
+          "source": "nexo",
+          "location": "items/armor.yml:15",
+          "reason": "item ruby_helmet CustomArmor.elytra",
+          "kind": "sprite",
+          "id": "fx:armor/ruby_wings",
+          "atlas": ""
+        },
+        {
+          "source": "nexo",
+          "location": "items/arms.yml:5",
+          "reason": "item ruby_sword Pack.parent_model",
+          "kind": "model",
+          "id": "fx:item/blade",
+          "atlas": ""
+        },
+        {
+          "source": "nexo",
+          "location": "items/arms.yml:4",
+          "reason": "item ruby_sword Pack.model",
+          "kind": "model",
+          "id": "fx:item/ruby_sword",
+          "atlas": ""
+        },
+        {
+          "source": "nexo",
+          "location": "items/arms.yml:8",
+          "reason": "item ruby_sword Pack.composite_models",
+          "kind": "model",
+          "id": "fx:item/ruby_glow",
+          "atlas": ""
+        },
+        {
+          "source": "nexo",
+          "location": "items/arms.yml:14",
+          "reason": "item iron_bow Pack.texture",
+          "kind": "sprite",
+          "id": "fx:item/iron_bow",
+          "atlas": ""
+        },
+        {
+          "source": "nexo",
+          "location": "items/arms.yml:15",
+          "reason": "item iron_bow Pack.texture",
+          "kind": "sprite",
+          "id": "fx:item/iron_bow_layer",
+          "atlas": ""
+        },
+        {
+          "source": "nexo",
+          "location": "items/arms.yml:17",
+          "reason": "item iron_bow Pack.pulling_textures (a model, or a texture when no such model exists)",
+          "kind": "model",
+          "id": "fx:item/iron_bow_0",
+          "atlas": ""
+        },
+        {
+          "source": "nexo",
+          "location": "items/arms.yml:17",
+          "reason": "item iron_bow Pack.pulling_textures (a model, or a texture when no such model exists)",
+          "kind": "sprite",
+          "id": "fx:item/iron_bow_0",
+          "atlas": ""
+        },
+        {
+          "source": "nexo",
+          "location": "items/arms.yml:18",
+          "reason": "item iron_bow Pack.pulling_textures (a model, or a texture when no such model exists)",
+          "kind": "model",
+          "id": "fx:item/iron_bow_1",
+          "atlas": ""
+        },
+        {
+          "source": "nexo",
+          "location": "items/arms.yml:18",
+          "reason": "item iron_bow Pack.pulling_textures (a model, or a texture when no such model exists)",
+          "kind": "sprite",
+          "id": "fx:item/iron_bow_1",
+          "atlas": ""
+        },
+        {
+          "source": "nexo",
+          "location": "items/arms.yml:20",
+          "reason": "item iron_bow Pack.damaged_models (a model, or a texture when no such model exists)",
+          "kind": "model",
+          "id": "fx:item/iron_bow_worn",
+          "atlas": ""
+        },
+        {
+          "source": "nexo",
+          "location": "items/arms.yml:20",
+          "reason": "item iron_bow Pack.damaged_models (a model, or a texture when no such model exists)",
+          "kind": "sprite",
+          "id": "fx:item/iron_bow_worn",
+          "atlas": ""
+        },
+        {
+          "source": "nexo",
+          "location": "items/arms.yml:25",
+          "reason": "item oak_shield Pack.texture",
+          "kind": "sprite",
+          "id": "fx:item/oak_shield",
+          "atlas": ""
+        },
+        {
+          "source": "nexo",
+          "location": "items/arms.yml:26",
+          "reason": "item oak_shield Pack.blocking_model (a model, or a texture when no such model exists)",
+          "kind": "model",
+          "id": "fx:item/oak_shield_blocking",
+          "atlas": ""
+        },
+        {
+          "source": "nexo",
+          "location": "items/arms.yml:26",
+          "reason": "item oak_shield Pack.blocking_model (a model, or a texture when no such model exists)",
+          "kind": "sprite",
+          "id": "fx:item/oak_shield_blocking",
+          "atlas": ""
+        },
+        {
+          "source": "nexo",
+          "location": "items/arms.yml:22",
+          "reason": "item oak_shield: the definition Nexo generates for it",
+          "kind": "item_definition",
+          "id": "nexo:oak_shield",
+          "atlas": ""
+        },
+        {
+          "source": "nexo",
+          "location": "items/arms.yml:30",
+          "reason": "item crystal_staff Pack.parent_model",
+          "kind": "model",
+          "id": "fx:block/frame",
+          "atlas": ""
+        },
+        {
+          "source": "nexo",
+          "location": "items/arms.yml:32",
+          "reason": "item crystal_staff Pack.textures",
+          "kind": "sprite",
+          "id": "fx:item/staff",
+          "atlas": ""
+        },
+        {
+          "source": "nexo",
+          "location": "items/arms.yml:33",
+          "reason": "item crystal_staff Pack.textures",
+          "kind": "sprite",
+          "id": "fx:item/staff_particle",
+          "atlas": ""
+        },
+        {
+          "source": "nexo",
+          "location": "items/arms.yml:34",
+          "reason": "item crystal_staff Pack.dyeable_texture (a model, or a texture when no such model exists)",
+          "kind": "model",
+          "id": "fx:item/staff_dye",
+          "atlas": ""
+        },
+        {
+          "source": "nexo",
+          "location": "items/arms.yml:34",
+          "reason": "item crystal_staff Pack.dyeable_texture (a model, or a texture when no such model exists)",
+          "kind": "sprite",
+          "id": "fx:item/staff_dye",
+          "atlas": ""
+        },
+        {
+          "source": "nexo",
+          "location": "items/arms.yml:28",
+          "reason": "item crystal_staff: the definition Nexo generates for it",
+          "kind": "item_definition",
+          "id": "nexo:crystal_staff",
+          "atlas": ""
+        },
+        {
+          "source": "nexo",
+          "location": "items/arms.yml:37",
+          "reason": "item bare_item Pack names no model or texture: the model is named after the item",
+          "kind": "model",
+          "id": "minecraft:bare_item",
+          "atlas": ""
+        },
+        {
+          "source": "nexo",
+          "location": "items/edge.yml:3",
+          "reason": "item Fancy Name Pack.texture",
+          "kind": "sprite",
+          "id": "fx:item/fancy",
+          "atlas": ""
+        },
+        {
+          "source": "nexo",
+          "location": "items/edge.yml:1",
+          "reason": "unresolvable: item Fancy Name: the definition Nexo generates for it is not a resource id: a placeholder or an invalid key",
+          "kind": "item_definition",
+          "id": "nexo:fancy name",
+          "atlas": ""
+        },
+        {
+          "source": "nexo",
+          "location": "items/edge.yml:6",
+          "reason": "unresolvable: item handmade builds its item definition in an ItemModel section; the models it names are not read",
+          "kind": "model",
+          "id": "ItemModel",
+          "atlas": ""
+        },
+        {
+          "source": "nexo",
+          "location": "items/edge.yml:9",
+          "reason": "unresolvable: item handmade Pack.bbmodel is converted to a model at build; the file is not followed",
+          "kind": "model",
+          "id": "fx:model/robot",
+          "atlas": ""
+        },
+        {
+          "source": "nexo",
+          "location": "items/edge.yml:5",
+          "reason": "item handmade: the definition Nexo generates for it",
+          "kind": "item_definition",
+          "id": "nexo:handmade",
+          "atlas": ""
+        },
+        {
+          "source": "nexo",
+          "location": "items/edge.yml:13",
+          "reason": "unresolvable: item uppercase_ref Pack.texture is not a resource id: a placeholder or an invalid key",
+          "kind": "sprite",
+          "id": "FX:Item/Upper",
+          "atlas": ""
+        },
+        {
+          "source": "nexo",
+          "location": "items/edge.yml:11",
+          "reason": "item uppercase_ref: the definition Nexo generates for it",
+          "kind": "item_definition",
+          "id": "nexo:uppercase_ref",
+          "atlas": ""
+        },
+        {
+          "source": "nexo",
+          "location": "items/furniture.yml:5",
+          "reason": "item oak_chair Components.tooltip_style",
+          "kind": "tooltip_style",
+          "id": "fx:fancy",
+          "atlas": ""
+        },
+        {
+          "source": "nexo",
+          "location": "items/furniture.yml:13",
+          "reason": "item oak_chair Mechanics.furniture.storage.open_sound",
+          "kind": "sound_event",
+          "id": "minecraft:block.chest.open",
+          "atlas": ""
+        },
+        {
+          "source": "nexo",
+          "location": "items/furniture.yml:11",
+          "reason": "item oak_chair Mechanics.furniture.block_sounds.break_sound",
+          "kind": "sound_event",
+          "id": "minecraft:block.wood.break",
+          "atlas": ""
+        },
+        {
+          "source": "nexo",
+          "location": "items/furniture.yml:17",
+          "reason": "item ore_block Pack.texture",
+          "kind": "sprite",
+          "id": "fx:block/ore",
+          "atlas": ""
+        },
+        {
+          "source": "nexo",
+          "location": "items/furniture.yml:21",
+          "reason": "item ore_block Mechanics.custom_block.model",
+          "kind": "model",
+          "id": "fx:block/ore",
+          "atlas": ""
+        },
+        {
+          "source": "nexo",
+          "location": "items/furniture.yml:23",
+          "reason": "item ore_block Mechanics.custom_block.block_sounds.step_sound",
+          "kind": "sound_event",
+          "id": "fx:ore.step",
+          "atlas": ""
+        },
+        {
+          "source": "nexo",
+          "location": "items/furniture.yml:15",
+          "reason": "item ore_block: the definition Nexo generates for it",
+          "kind": "item_definition",
+          "id": "nexo:ore_block",
+          "atlas": ""
+        },
+        {
+          "source": "nexo",
+          "location": "items/templated.yml:7",
+          "reason": "unresolvable: item tpl_user merges template sections and fills their placeholders at build; only the keys it sets itself are read",
+          "kind": "item_definition",
+          "id": "template tpl_base",
+          "atlas": ""
+        },
+        {
+          "source": "nexo",
+          "location": "items/templated.yml:9",
+          "reason": "item tpl_user Pack.texture",
+          "kind": "sprite",
+          "id": "fx:item/tpl_user",
+          "atlas": ""
+        },
+        {
+          "source": "nexo",
+          "location": "glyphs/ui.yml:2",
+          "reason": "glyph coin texture",
+          "kind": "sprite",
+          "id": "fx:font/coin",
+          "atlas": ""
+        },
+        {
+          "source": "nexo",
+          "location": "glyphs/ui.yml:8",
+          "reason": "glyph heart texture",
+          "kind": "sprite",
+          "id": "fx:font/heart",
+          "atlas": ""
+        },
+        {
+          "source": "nexo",
+          "location": "glyphs/ui.yml:13",
+          "reason": "unresolvable: glyph spin is animated: Nexo converts the gif into textures at build",
+          "kind": "sprite",
+          "id": "fx:font/spin",
+          "atlas": ""
+        },
+        {
+          "source": "nexo",
+          "location": "sounds.yml:6",
+          "reason": "sound event fx:ui.click sound",
+          "kind": "path",
+          "id": "assets/fx/sounds/ui/click.ogg",
+          "atlas": ""
+        },
+        {
+          "source": "nexo",
+          "location": "sounds.yml:9",
+          "reason": "sound event fx:ambient.wind sounds",
+          "kind": "path",
+          "id": "assets/fx/sounds/ambient/wind_1.ogg",
+          "atlas": ""
+        },
+        {
+          "source": "nexo",
+          "location": "sounds.yml:10",
+          "reason": "sound event fx:ambient.wind sounds",
+          "kind": "path",
+          "id": "assets/fx/sounds/ambient/wind_2.ogg",
+          "atlas": ""
+        }
+      ]
+    }
+  ],
+  "sourceRoots": [
+    {
+      "path": "assets/fx/font/default.json",
+      "usages": [
+        {
+          "source": "nexo",
+          "location": "glyphs/ui.yml:7",
+          "reason": "glyph heart default font",
+          "kind": "font",
+          "id": "fx:default",
+          "atlas": ""
+        },
+        {
+          "source": "nexo",
+          "location": "glyphs/ui.yml:12",
+          "reason": "glyph spin default font",
+          "kind": "font",
+          "id": "fx:default",
+          "atlas": ""
+        },
+        {
+          "source": "nexo",
+          "location": "glyphs/ui.yml:15",
+          "reason": "glyph alias default font",
+          "kind": "font",
+          "id": "fx:default",
+          "atlas": ""
+        }
+      ]
+    },
+    {
+      "path": "assets/fx/font/hud.json",
+      "usages": [
+        {
+          "source": "nexo",
+          "location": "glyphs/ui.yml:3",
+          "reason": "glyph coin font",
+          "kind": "font",
+          "id": "fx:hud",
+          "atlas": ""
+        }
+      ]
+    },
+    {
+      "path": "assets/fx/items/furniture/oak_chair.json",
+      "usages": [
+        {
+          "source": "nexo",
+          "location": "items/furniture.yml:4",
+          "reason": "item oak_chair Components.item_model",
+          "kind": "item_definition",
+          "id": "fx:furniture/oak_chair",
+          "atlas": ""
+        }
+      ]
+    },
+    {
+      "path": "assets/fx/items/furniture/oak_chair_placed.json",
+      "usages": [
+        {
+          "source": "nexo",
+          "location": "items/furniture.yml:8",
+          "reason": "item oak_chair Mechanics.furniture.item_model",
+          "kind": "item_definition",
+          "id": "fx:furniture/oak_chair_placed",
+          "atlas": ""
+        }
+      ]
+    },
+    {
+      "path": "assets/fx/sounds.json",
+      "usages": [
+        {
+          "source": "nexo",
+          "location": "items/furniture.yml:10",
+          "reason": "item oak_chair Mechanics.furniture.block_sounds.place_sound",
+          "kind": "sound_event",
+          "id": "fx:chair.place",
+          "atlas": ""
+        },
+        {
+          "source": "nexo",
+          "location": "sounds.yml:5",
+          "reason": "sound event fx:ui.click",
+          "kind": "sound_event",
+          "id": "fx:ui.click",
+          "atlas": ""
+        },
+        {
+          "source": "nexo",
+          "location": "sounds.yml:7",
+          "reason": "sound event fx:ambient.wind",
+          "kind": "sound_event",
+          "id": "fx:ambient.wind",
+          "atlas": ""
+        },
+        {
+          "source": "nexo",
+          "location": "sounds.yml:11",
+          "reason": "sound event fx:ui.alias",
+          "kind": "sound_event",
+          "id": "fx:ui.alias",
+          "atlas": ""
+        },
+        {
+          "source": "nexo",
+          "location": "sounds.yml:13",
+          "reason": "sound event fx:ui.alias reference_id",
+          "kind": "sound_event",
+          "id": "fx:ui.click",
+          "atlas": ""
+        }
+      ]
+    },
+    {
+      "path": "assets/minecraft/items/diamond_sword.json",
+      "usages": [
+        {
+          "source": "nexo",
+          "location": "items/arms.yml:6",
+          "reason": "item ruby_sword custom_model_data: a case of the definition of its material",
+          "kind": "item_definition",
+          "id": "minecraft:diamond_sword",
+          "atlas": ""
+        }
+      ]
+    },
+    {
+      "path": "assets/minecraft/items/paper.json",
+      "usages": [
+        {
+          "source": "nexo",
+          "location": "items/arms.yml:38",
+          "reason": "item bare_item custom_model_data: a case of the definition of its material",
+          "kind": "item_definition",
+          "id": "minecraft:paper",
+          "atlas": ""
+        }
+      ]
+    },
+    {
+      "path": "assets/nexo/equipment/ruby.json",
+      "usages": [
+        {
+          "source": "nexo",
+          "location": "items/armor.yml:8",
+          "reason": "item ruby_helmet Components.equippable.asset_id",
+          "kind": "equipment",
+          "id": "nexo:ruby",
+          "atlas": ""
+        },
+        {
+          "source": "nexo",
+          "location": "items/armor.yml:12",
+          "reason": "item ruby_helmet CustomArmor.id: the equipment asset Nexo generates",
+          "kind": "equipment",
+          "id": "nexo:ruby",
+          "atlas": ""
+        }
+      ]
+    },
+    {
+      "path": "assets/nexo/items/bare_item.json",
+      "usages": [
+        {
+          "source": "nexo",
+          "location": "items/arms.yml:36",
+          "reason": "item bare_item: the definition Nexo generates for it",
+          "kind": "item_definition",
+          "id": "nexo:bare_item",
+          "atlas": ""
+        }
+      ]
+    },
+    {
+      "path": "assets/nexo/items/iron_bow.json",
+      "usages": [
+        {
+          "source": "nexo",
+          "location": "items/arms.yml:10",
+          "reason": "item iron_bow: the definition Nexo generates for it",
+          "kind": "item_definition",
+          "id": "nexo:iron_bow",
+          "atlas": ""
+        }
+      ]
+    },
+    {
+      "path": "assets/nexo/items/ruby_sword.json",
+      "usages": [
+        {
+          "source": "nexo",
+          "location": "items/arms.yml:1",
+          "reason": "item ruby_sword: the definition Nexo generates for it",
+          "kind": "item_definition",
+          "id": "nexo:ruby_sword",
+          "atlas": ""
+        }
+      ]
+    }
+  ],
+  "unusedItems": [ ],
+  "warnings": [
+    "no asset index: minecraft: sound files and events the pack does not define are assumed vanilla, and every file under minecraft:sounds/ is kept"
+  ]
+}

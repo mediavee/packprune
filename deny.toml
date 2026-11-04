@@ -1,0 +1,43 @@
+# cargo-deny: advisories, duplicate versions, licences and sources fail the gate.
+
+[advisories]
+# Every advisory fails the gate, unmaintained crates included; an accepted one is listed here with why.
+unmaintained = "all"
+yanked = "deny"
+ignore = []
+
+[bans]
+# Two semver-incompatible versions of one crate in Cargo.lock, dev-dependencies included; each accepted one is
+# skipped with why.
+multiple-versions = "deny"
+multiple-versions-include-dev = true
+wildcards = "deny"
+allow-wildcard-paths = true
+skip = [
+    { crate = "heck@0.4.1", reason = "ouroboros_macro (via optivorbis) is on heck 0.4, clap_derive on 0.5" },
+    { crate = "syn@2.0.119", reason = "ouroboros_macro and tracing-attributes are on syn 2, clap_derive and schemars_derive on 3" },
+    { crate = "miniz_oxide@0.8.9", reason = "png 0.18 is on miniz_oxide 0.8, flate2 1.1 on 0.9" },
+]
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+
+[licenses]
+# Licences compatible with distributing the binary under GPL-3.0-or-later. A dual-licensed crate passes on
+# one allowed choice: optivorbis is used under BSD-3-Clause, r-efi under MIT.
+confidence-threshold = 0.93
+allow = [
+    "0BSD",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-3-Clause",
+    "CC0-1.0",
+    "GPL-3.0-or-later",
+    "MIT",
+    "MIT-0",
+    "MPL-2.0",
+    "Unicode-3.0",
+    "Unlicense",
+    "Zlib",
+]

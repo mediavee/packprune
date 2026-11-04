@@ -1,0 +1,3 @@
+sprite | viki:one | minecraft:paintings | first!data/viki/painting_variant/one.json asset_id | 
+sprite | viki:overlaid | minecraft:paintings | first!extra/data/viki/painting_variant/overlaid.json asset_id | 
+sprite | viki:two | minecraft:paintings | second!data/viki/painting_variant/two.json asset_id | 

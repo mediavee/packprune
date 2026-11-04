@@ -1,0 +1,4 @@
+atlas_loaded_orphan assets/fx/textures/item/unused.png
+atlas_loaded_orphan assets/fx/textures/gui/sprites/icon/unused.png
+atlas_loaded_orphan assets/fx/textures/gui/sprites/icon/unused.png.mcmeta
+orphan assets/fx/textures/misc/loose.png

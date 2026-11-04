@@ -1,0 +1,8 @@
+version: 1
+keep:
+  - path: "assets/fx/textures/misc/plugin_*.png"
+    why: "sent by plugin code"
+  - model: "fx:runtime/*"
+    why: "models a plugin sets at runtime"
+  - texture: "fx:nothing/*"
+    why: "stale"

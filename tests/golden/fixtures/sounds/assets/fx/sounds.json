@@ -1,0 +1,30 @@
+{
+  "long": {
+    "sounds": [
+      "fx:long",
+      {
+        "name": "fx:long",
+        "stream": false,
+        "volume": 0.5
+      }
+    ]
+  },
+  "short": {
+    "sounds": [
+      "fx:short"
+    ]
+  },
+  "blip": {
+    "sounds": [
+      "fx:blip"
+    ]
+  },
+  "fast": {
+    "sounds": [
+      {
+        "name": "fx:fast",
+        "pitch": 1.5
+      }
+    ]
+  }
+}

@@ -1,0 +1,83 @@
+# cargo-fuzz targets: their own workspace, not a member of the root one.
+[package]
+name = "packprune-fuzz"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[package.metadata]
+cargo-fuzz = true
+
+[workspace]
+members = ["."]
+
+[dependencies]
+libfuzzer-sys = "=0.4.13"
+packprune-codec = { path = "../crates/packprune-codec" }
+packprune-config = { path = "../crates/packprune-config" }
+packprune-pack = { path = "../crates/packprune-pack" }
+packprune-sources = { path = "../crates/packprune-sources" }
+packprune-zip = { path = "../crates/packprune-zip" }
+
+[[bin]]
+name = "zip_read"
+path = "fuzz_targets/zip_read.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "json_tokens"
+path = "fuzz_targets/json_tokens.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "png"
+path = "fuzz_targets/png.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "ogg"
+path = "fuzz_targets/ogg.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "glsl_tokens"
+path = "fuzz_targets/glsl_tokens.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "properties"
+path = "fuzz_targets/properties.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "config_toml"
+path = "fuzz_targets/config_toml.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "pack_meta"
+path = "fuzz_targets/pack_meta.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "yaml_source"
+path = "fuzz_targets/yaml_source.rs"
+test = false
+doc = false
+bench = false

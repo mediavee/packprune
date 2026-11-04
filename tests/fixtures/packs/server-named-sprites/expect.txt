@@ -1,0 +1,4 @@
+atlas_loaded_orphan assets/fx/textures/gui/sprites/tooltip/rare_background.png
+atlas_loaded_orphan assets/fx/textures/gui/sprites/tooltip/rare_frame.png
+atlas_loaded_orphan assets/fx/textures/painting/sunset.png
+atlas_loaded_orphan assets/fx/textures/block/icon_ruby.png

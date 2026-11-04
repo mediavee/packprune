@@ -1,0 +1,1 @@
+{"ui.click":{"sounds":[{"type":"event","name":"other:base.click"},{"name":"fx:ui/click","volume":0.5}]},"ui.broken":{"sounds":[{"type":"event","name":"other:nope"}]},"ui.vanilla":{"sounds":[{"type":"event","name":"block.stone.break"},"ambient/cave/cave1"]}}

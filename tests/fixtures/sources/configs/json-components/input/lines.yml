@@ -1,0 +1,5 @@
+title: '{"text":"Shop","font":"viki:title","extra":[{"text":"x","font":"viki:extra"},{"sprite":"item/gem","atlas":"minecraft:items"},{"object":"atlas","sprite":"block/stone"}]}'
+list: '[{"text":"a","font":"viki:inlist"}]'
+notjson: "{item.name}"
+placeholder: '{"text":"x","font":"{font}"}'
+badatlas: '{"atlas":"Not An Atlas","sprite":"item/gem"}'

@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+actual=$("${1:?Expected the binary path}" --version)
+printf '%s\n' "$actual"
+if [ "${GITHUB_EVENT_NAME:-}" = push ] && [[ "${GITHUB_REF:-}" == refs/tags/v* ]]; then
+    expected=${GITHUB_REF_NAME#v}
+    expected=${expected%-dry-run}
+    if [ "$actual" != "packprune $expected" ]; then
+        echo "Release tag $GITHUB_REF_NAME requires packprune $expected; got $actual" >&2
+        exit 1
+    fi
+fi

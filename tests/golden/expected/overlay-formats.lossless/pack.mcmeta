@@ -1,0 +1,1 @@
+{"pack":{"min_format":88,"max_format":88,"description":"fixture"},"overlays":{"entries":[{"directory":"older_c","formats":{"min_inclusive":30,"max_inclusive":41}},{"directory":"old_a","formats":[42,83]},{"directory":"everywhere","formats":[30,199],"min_format":30,"max_format":199},{"directory":"new_b","min_format":88,"max_format":[99,1]}]}}

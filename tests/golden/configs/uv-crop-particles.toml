@@ -1,0 +1,4 @@
+version = 2
+
+[profiles.default.lossy.uv-crop-particles]
+globs = ["**"]

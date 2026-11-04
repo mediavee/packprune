@@ -1,0 +1,75 @@
+{
+  "client": "26.2",
+  "why": "Each rule was read in the 26.2 client (unobfuscated). path: fields of the registry entry, / between steps, * for every value of an object or element of an array. The rest is a UsageRule.",
+  "registries": {
+    "painting_variant": [
+      {"path": "asset_id", "kind": "sprite", "atlas": "minecraft:paintings", "why": "PaintingRenderer: paintingsAtlas.getSprite(variant.assetId())"}
+    ],
+    "trim_pattern": [
+      {"path": "asset_id", "kind": "sprite", "atlas": "minecraft:armor_trims", "id": "{namespace}:trims/entity/*/{path}_*", "why": "ArmorTrim.layerAssetId: <pattern namespace>:trims/entity/<layer>/<pattern path>_<material suffix>"}
+    ],
+    "trim_material": [
+      {"path": "asset_name", "kind": "sprite", "atlas": "minecraft:armor_trims", "id": "*:trims/entity/*/*_{value}", "why": "ArmorTrim.layerAssetId: the material's suffix ends the sprite id, in the pattern's namespace"},
+      {"path": "override_armor_assets/*", "kind": "sprite", "atlas": "minecraft:armor_trims", "id": "*:trims/entity/*/*_{value}", "why": "MaterialAssetGroup.assetId: the suffix for one equipment asset"}
+    ],
+    "banner_pattern": [
+      {"path": "asset_id", "kind": "sprite", "atlas": "minecraft:banner_patterns", "id": "{namespace}:entity/banner/{path}", "why": "Sheets.BANNER_MAPPER prefix entity/banner"},
+      {"path": "asset_id", "kind": "sprite", "atlas": "minecraft:shield_patterns", "id": "{namespace}:entity/shield/{path}", "why": "Sheets.SHIELD_MAPPER prefix entity/shield"}
+    ],
+    "jukebox_song": [
+      {"path": "sound_event", "kind": "sound_event", "why": "JukeboxSong.soundEvent, an id or an inline {sound_id}"}
+    ],
+    "instrument": [
+      {"path": "sound_event", "kind": "sound_event", "why": "Instrument.soundEvent, an id or an inline {sound_id}"}
+    ],
+    "wolf_variant": [
+      {"path": "assets/*", "kind": "sprite", "why": "WolfVariant.AssetInfo wild/tame/angry: ClientAsset.ResourceTexture, textures/<path>.png"},
+      {"path": "baby_assets/*", "kind": "sprite", "why": "WolfVariant babyInfo"}
+    ],
+    "pig_variant": [
+      {"path": "asset_id", "kind": "sprite", "why": "ModelAndTexture asset: ClientAsset.ResourceTexture, textures/<path>.png"},
+      {"path": "baby_asset_id", "kind": "sprite", "why": "PigVariant.babyTexture"}
+    ],
+    "cow_variant": [
+      {"path": "asset_id", "kind": "sprite", "why": "ModelAndTexture asset"},
+      {"path": "baby_asset_id", "kind": "sprite", "why": "CowVariant baby texture"}
+    ],
+    "chicken_variant": [
+      {"path": "asset_id", "kind": "sprite", "why": "ModelAndTexture asset"},
+      {"path": "baby_asset_id", "kind": "sprite", "why": "ChickenVariant baby texture"}
+    ],
+    "cat_variant": [
+      {"path": "asset_id", "kind": "sprite", "why": "ClientAsset.ResourceTexture.DEFAULT_FIELD_CODEC"},
+      {"path": "baby_asset_id", "kind": "sprite", "why": "CatVariant baby texture"}
+    ],
+    "frog_variant": [
+      {"path": "asset_id", "kind": "sprite", "why": "ClientAsset.ResourceTexture.DEFAULT_FIELD_CODEC"}
+    ],
+    "zombie_nautilus_variant": [
+      {"path": "asset_id", "kind": "sprite", "why": "ModelAndTexture asset"}
+    ],
+    "pig_sound_variant": [
+      {"path": "adult_sounds/*", "kind": "sound_event", "why": "PigSoundVariant.PigSoundSet: SoundEvent holders"},
+      {"path": "baby_sounds/*", "kind": "sound_event", "why": "PigSoundVariant.PigSoundSet"}
+    ],
+    "chicken_sound_variant": [
+      {"path": "adult_sounds/*", "kind": "sound_event", "why": "ChickenSoundVariant.ChickenSoundSet"},
+      {"path": "baby_sounds/*", "kind": "sound_event", "why": "ChickenSoundVariant.ChickenSoundSet"}
+    ],
+    "cat_sound_variant": [
+      {"path": "adult_sounds/*", "kind": "sound_event", "why": "CatSoundVariant.CatSoundSet"},
+      {"path": "baby_sounds/*", "kind": "sound_event", "why": "CatSoundVariant.CatSoundSet"}
+    ],
+    "wolf_sound_variant": [
+      {"path": "adult_sounds/*", "kind": "sound_event", "why": "WolfSoundVariant.WolfSoundSet"},
+      {"path": "baby_sounds/*", "kind": "sound_event", "why": "WolfSoundVariant.WolfSoundSet"}
+    ],
+    "cow_sound_variant": [
+      {"path": "*", "kind": "sound_event", "why": "CowSoundVariant: the four sounds are its own fields"}
+    ],
+    "advancement": [
+      {"path": "display/background", "kind": "sprite", "why": "DisplayInfo.background: ClientAsset.ResourceTexture, textures/<path>.png"}
+    ]
+  },
+  "text_registries": ["dialog"]
+}
