@@ -1,6 +1,7 @@
-use packprune_codec::{audio, metrics};
-use packprune_pack::{PhysPath, kinds::ResourcePath};
+use packprune_codec::{CodecError, audio, metrics};
+use packprune_pack::{Entry, PhysPath, kinds::ResourcePath};
 use packprune_pass::{Edits, Loss, LossRecord, Pass, PassCx, PassError, Stage};
+use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use schemars::JsonSchema;
 use serde::Deserialize;
 use serde::de::DeserializeOwned;
@@ -187,12 +188,32 @@ impl Pass for Audio {
     }
 }
 
+/// A selected sound and how to transcode it; `refused` ones only report why they are kept.
+struct Job<'a> {
+    path: &'a PhysPath,
+    entry: &'a Entry,
+    destination: PhysPath,
+    convert: bool,
+    refused: bool,
+    mono: bool,
+    options: Options,
+}
+
+enum Outcome {
+    Kept(String),
+    Transcoded {
+        output: Vec<u8>,
+        change: String,
+        loss: Vec<LossRecord>,
+    },
+}
+
 pub(super) fn transcode(
     cx: &PassCx<'_>,
     selections: &[Selection],
     name: &'static str,
 ) -> Result<Edits, PassError> {
-    let mut edits = Edits::default();
+    let mut planned = Vec::new();
     for (path, entry) in &cx.pack.files {
         if !cx.scope.contains(path) {
             continue;
@@ -267,101 +288,150 @@ pub(super) fn transcode(
         } else {
             path.clone()
         };
-        if convert
-            && (cx.pack.files.contains_key(&destination) || edits.added.contains_key(&destination))
+        let refused = !cx.scope.contains(&destination) || convert && cx.pinned.contains(path);
+        planned.push(Job {
+            path,
+            entry,
+            destination,
+            convert,
+            refused,
+            mono,
+            options,
+        });
+    }
+
+    // Each sound is decoded, encoded and measured on its own; the edits are then applied in path order, so the
+    // result does not depend on the thread count.
+    let outcomes: Vec<Option<Result<Outcome, PassError>>> = planned
+        .par_iter()
+        .map(|job| {
+            let collides = job.convert && cx.pack.files.contains_key(&job.destination);
+            (!collides && !job.refused).then(|| run(job, name))
+        })
+        .collect();
+
+    let mut edits = Edits::default();
+    for (job, outcome) in planned.into_iter().zip(outcomes) {
+        let path = job.path;
+        if job.convert
+            && (cx.pack.files.contains_key(&job.destination)
+                || edits.added.contains_key(&job.destination))
         {
-            edits
-                .changes
-                .push(format!("skipped {path}: {destination} already exists"));
+            edits.changes.push(format!(
+                "skipped {path}: {} already exists",
+                job.destination
+            ));
             continue;
         }
-        if !cx.scope.contains(&destination) || convert && cx.pinned.contains(path) {
+        if job.refused {
             edits.changes.push(format!(
                 "kept {path}: conversion destination is outside scope or input is pinned"
             ));
             continue;
         }
-        let before = match audio::decode(&entry.blob) {
-            Ok(pcm) => pcm,
-            Err(error) => {
-                edits.changes.push(format!("kept {path}: {error}"));
-                continue;
+        match outcome.expect("a job that is neither refused nor colliding has run")? {
+            Outcome::Kept(why) => edits.changes.push(why),
+            Outcome::Transcoded {
+                output,
+                change,
+                loss,
+            } => {
+                edits.changes.push(change);
+                edits.loss.extend(loss);
+                if job.convert {
+                    edits.removed.insert(path.clone());
+                    edits.added.insert(job.destination.clone(), output.into());
+                    edits.moves.insert(path.clone(), job.destination);
+                } else {
+                    edits.replaced.insert(path.clone(), output.into());
+                }
             }
-        };
-        let transformed = if mono {
-            audio::downmix(&before)
-        } else {
-            Ok(before.clone())
-        }
-        .and_then(|pcm| match options.cap {
-            Some(cap) => audio::resample(&pcm, cap),
-            None => Ok(pcm),
-        })
-        .map_err(|e| PassError::Failed {
-            pass: name,
-            why: format!("{path}: {e}"),
-        })?;
-        let output = audio::encode(&transformed, options.quality / 10.0)
-            .and_then(|bytes| audio::optimise(&bytes))
-            .map_err(|e| PassError::Failed {
-                pass: name,
-                why: format!("{path}: {e}"),
-            })?;
-        let after = audio::decode(&output).map_err(|e| PassError::Failed {
-            pass: name,
-            why: format!("{path}: {e}"),
-        })?;
-        let loss = match metrics::sound_loss(&before, &after) {
-            Ok(loss) => loss,
-            Err(error) => {
-                edits
-                    .changes
-                    .push(format!("kept {path}: loss cannot be measured: {error}"));
-                continue;
-            }
-        };
-        if options.max_lsd.is_some_and(|limit| loss.lsd > limit)
-            || options
-                .min_snr
-                .is_some_and(|limit| loss.snr.is_none_or(|snr| snr < limit))
-        {
-            edits
-                .changes
-                .push(format!("kept {path}: measured loss exceeds threshold"));
-            continue;
-        }
-        if !convert && !mono && options.cap.is_none() && output.len() >= entry.blob.len() {
-            edits
-                .changes
-                .push(format!("kept {path}: transcoded Ogg would not be smaller"));
-            continue;
-        }
-        edits.changes.push(format!("{path}: {} channels at {} Hz to {} channels at {} Hz, {} to {} B, LSD {:.6} dB, SNR {}", before.channels.len(), before.rate, after.channels.len(), after.rate, entry.blob.len(), output.len(), loss.lsd, loss.snr.map_or_else(|| "unavailable".into(), |v| format!("{v:.6} dB"))));
-        for (metric, value) in [
-            ("lsd", loss.lsd),
-            ("pcm_before", loss.pcm_before as f64),
-            ("pcm_after", loss.pcm_after as f64),
-        ] {
-            edits.loss.push(LossRecord {
-                key: path.to_string(),
-                metric: metric.into(),
-                value,
-            });
-        }
-        if let Some(value) = loss.snr {
-            edits.loss.push(LossRecord {
-                key: path.to_string(),
-                metric: "snr".into(),
-                value,
-            });
-        }
-        if convert {
-            edits.removed.insert(path.clone());
-            edits.added.insert(destination.clone(), output.into());
-            edits.moves.insert(path.clone(), destination);
-        } else {
-            edits.replaced.insert(path.clone(), output.into());
         }
     }
     Ok(edits)
+}
+
+fn run(job: &Job<'_>, name: &'static str) -> Result<Outcome, PassError> {
+    let Job {
+        path,
+        entry,
+        convert,
+        mono,
+        options,
+        ..
+    } = *job;
+    let failed = |e: CodecError| PassError::Failed {
+        pass: name,
+        why: format!("{path}: {e}"),
+    };
+    let before = match audio::decode(&entry.blob) {
+        Ok(pcm) => pcm,
+        Err(error) => return Ok(Outcome::Kept(format!("kept {path}: {error}"))),
+    };
+    let transformed = if mono {
+        audio::downmix(&before)
+    } else {
+        Ok(before.clone())
+    }
+    .and_then(|pcm| match options.cap {
+        Some(cap) => audio::resample(&pcm, cap),
+        None => Ok(pcm),
+    })
+    .map_err(failed)?;
+    let output = audio::encode(&transformed, options.quality / 10.0)
+        .and_then(|bytes| audio::optimise(&bytes))
+        .map_err(failed)?;
+    let after = audio::decode(&output).map_err(failed)?;
+    let loss = match metrics::sound_loss(&before, &after) {
+        Ok(loss) => loss,
+        Err(error) => {
+            return Ok(Outcome::Kept(format!(
+                "kept {path}: loss cannot be measured: {error}"
+            )));
+        }
+    };
+    if options.max_lsd.is_some_and(|limit| loss.lsd > limit)
+        || options
+            .min_snr
+            .is_some_and(|limit| loss.snr.is_none_or(|snr| snr < limit))
+    {
+        return Ok(Outcome::Kept(format!(
+            "kept {path}: measured loss exceeds threshold"
+        )));
+    }
+    if !convert && !mono && options.cap.is_none() && output.len() >= entry.blob.len() {
+        return Ok(Outcome::Kept(format!(
+            "kept {path}: transcoded Ogg would not be smaller"
+        )));
+    }
+    let change = format!(
+        "{path}: {} channels at {} Hz to {} channels at {} Hz, {} to {} B, LSD {:.6} dB, SNR {}",
+        before.channels.len(),
+        before.rate,
+        after.channels.len(),
+        after.rate,
+        entry.blob.len(),
+        output.len(),
+        loss.lsd,
+        loss.snr
+            .map_or_else(|| "unavailable".into(), |v| format!("{v:.6} dB"))
+    );
+    let records = [
+        ("lsd", loss.lsd),
+        ("pcm_before", loss.pcm_before as f64),
+        ("pcm_after", loss.pcm_after as f64),
+    ]
+    .into_iter()
+    .chain(loss.snr.map(|value| ("snr", value)))
+    .map(|(metric, value)| LossRecord {
+        key: path.to_string(),
+        metric: metric.into(),
+        value,
+    })
+    .collect();
+    Ok(Outcome::Transcoded {
+        output,
+        change,
+        loss: records,
+    })
 }
