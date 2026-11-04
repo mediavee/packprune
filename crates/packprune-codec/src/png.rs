@@ -3,7 +3,7 @@ use std::num::NonZeroU64;
 
 use crate::{CodecError, MAX_DECODED_BYTES, invalid, zopfli_iterations};
 
-/// The largest image Zopfli compresses: 512×512, about 5 s at the default effort.
+/// The Zopfli time budget of an image: what 512×512 takes at the default effort, about 5 s.
 const ZOPFLI_PIXELS: usize = 512 * 512;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -20,6 +20,8 @@ pub struct Options {
     pub keep_color_type: bool,
     pub keep_bit_depth: bool,
     pub keep_grayscale: bool,
+    /// The client decodes with `javax.imageio`, not stb_image: ancillary chunks and 16-bit samples stay.
+    pub imageio: bool,
 }
 
 #[derive(Clone, Debug)]
@@ -125,6 +127,13 @@ fn validate_transparency(bytes: &[u8]) -> Result<(), CodecError> {
     Ok(())
 }
 
+fn bit_depth(bytes: &[u8]) -> Option<u8> {
+    bytes
+        .get(24)
+        .copied()
+        .filter(|_| bytes.get(12..16) == Some(b"IHDR"))
+}
+
 fn image_len(width: u32, height: u32) -> Result<usize, CodecError> {
     let size = u128::from(width) * u128::from(height) * 4;
     if width == 0 || height == 0 || size > MAX_DECODED_BYTES as u128 {
@@ -194,8 +203,20 @@ fn encode_rgba(image: &Image) -> Result<Vec<u8>, CodecError> {
 
 pub fn optimise(bytes: &[u8], options: &Options) -> Result<Vec<u8>, CodecError> {
     let before = decode(bytes)?;
+    // stb_image reads 16-bit samples as their high byte, so the 8-bit image it decodes is the whole picture.
+    let eight_bit;
+    let source = if !options.imageio && !options.keep_bit_depth && bit_depth(bytes) == Some(16) {
+        eight_bit = encode(&before)?;
+        &eight_bit
+    } else {
+        bytes
+    };
     let mut oxi = oxipng::Options::from_preset(2);
-    oxi.strip = oxipng::StripChunks::Safe;
+    oxi.strip = if options.imageio {
+        oxipng::StripChunks::Safe
+    } else {
+        oxipng::StripChunks::All
+    };
     oxi.color_type_reduction = !options.keep_color_type;
     oxi.palette_reduction = !options.keep_color_type;
     oxi.bit_depth_reduction = !options.keep_bit_depth;
@@ -211,7 +232,7 @@ pub fn optimise(bytes: &[u8], options: &Options) -> Result<Vec<u8>, CodecError> 
             ..Default::default()
         });
     }
-    let out = oxipng::optimize_from_memory(bytes, &oxi).map_err(|e| invalid("PNG", e))?;
+    let out = oxipng::optimize_from_memory(source, &oxi).map_err(|e| invalid("PNG", e))?;
     if decode(&out)? != before {
         return Err(invalid("PNG", "optimisation changed client-decoded pixels"));
     }
@@ -222,60 +243,24 @@ pub fn optimise(bytes: &[u8], options: &Options) -> Result<Vec<u8>, CodecError> 
     })
 }
 
-pub fn optimise_alpha(bytes: &[u8], options: &Options) -> Result<Vec<u8>, CodecError> {
-    let mut image = decode(bytes)?;
-    for pixel in image.rgba.as_chunks_mut::<4>().0 {
+/// The image with the colour of fully transparent pixels zeroed; `None` when none has a colour.
+pub fn clear_transparent(image: &Image) -> Option<Image> {
+    let hidden = |p: &[u8; 4]| p[3] == 0 && p[..3] != [0; 3];
+    if !image.rgba.as_chunks::<4>().0.iter().any(hidden) {
+        return None;
+    }
+    let mut cleared = image.clone();
+    for pixel in cleared.rgba.as_chunks_mut::<4>().0 {
         if pixel[3] == 0 {
             pixel[..3].fill(0);
         }
     }
-    optimise_lossy_image(bytes, &image, options)
+    Some(cleared)
 }
 
-pub fn downsize_single_color(bytes: &[u8], options: &Options) -> Result<Vec<u8>, CodecError> {
-    let mut image = decode(bytes)?;
-    if image
-        .rgba
-        .as_chunks::<4>()
-        .0
-        .iter()
-        .all(|p| p == &image.rgba[..4])
-    {
-        image.width = 1;
-        image.height = 1;
-        image.rgba.truncate(4);
-    }
-    optimise_lossy_image(bytes, &image, options)
-}
-
-fn optimise_lossy_image(
-    bytes: &[u8],
-    image: &Image,
-    options: &Options,
-) -> Result<Vec<u8>, CodecError> {
-    let lossless = optimise(bytes, options)?;
-    if options.keep_color_type || options.keep_bit_depth {
-        return Ok(lossless);
-    }
-    let candidate = optimise(&encode(image)?, options)?;
-    Ok(if candidate.len() < lossless.len() {
-        candidate
-    } else {
-        lossless
-    })
-}
-
-/// Opt-in lossy quantisation; an unprofitable candidate yields the lossless result.
-pub fn quantize(
-    bytes: &[u8],
-    options: &Options,
-    quantization: &Quantization,
-) -> Result<Vec<u8>, CodecError> {
-    let lossless = optimise(bytes, options)?;
-    if options.keep_color_type || options.keep_bit_depth {
-        return Ok(lossless);
-    }
-    let image = decode(bytes)?;
+/// The image quantised to a palette, as an indexed PNG for [`optimise`]; `None` when no pixel changes.
+pub fn quantize(image: &Image, quantization: &Quantization) -> Result<Option<Vec<u8>>, CodecError> {
+    validate(image)?;
     let pixels: Vec<_> = image
         .rgba
         .as_chunks::<4>()
@@ -300,6 +285,16 @@ pub fn quantize(
     let (palette, indices) = result
         .remapped(&mut input)
         .map_err(|e| invalid("PNG quantization", e))?;
+    let unchanged = indices
+        .iter()
+        .zip(image.rgba.as_chunks::<4>().0)
+        .all(|(&i, p)| {
+            let c = palette[usize::from(i)];
+            [c.r, c.g, c.b, c.a] == *p
+        });
+    if unchanged {
+        return Ok(None);
+    }
     let mut candidate = Vec::new();
     {
         let mut encoder = png::Encoder::new(&mut candidate, image.width, image.height);
@@ -318,12 +313,7 @@ pub fn quantize(
             .map_err(|e| invalid("PNG", e))?;
         writer.finish().map_err(|e| invalid("PNG", e))?;
     }
-    let candidate = optimise(&candidate, options)?;
-    Ok(if candidate.len() < lossless.len() {
-        candidate
-    } else {
-        lossless
-    })
+    Ok(Some(candidate))
 }
 
 #[cfg(test)]
@@ -426,39 +416,33 @@ mod tests {
     }
 
     #[test]
-    fn quantization_must_beat_lossless_not_input() {
+    fn quantization_changes_pixels_or_yields_nothing() {
         let rgba = (0..1024)
             .flat_map(|i| {
                 let grey = (i % 32 * 8) as u8;
                 [grey, grey, grey, 255]
             })
             .collect::<Vec<_>>();
-        let mut bytes = Vec::new();
-        {
-            let mut encoder = png::Encoder::new(&mut bytes, 32, 32);
-            encoder.set_color(png::ColorType::Rgba);
-            encoder
-                .add_text_chunk("padding".into(), "x".repeat(4096))
-                .unwrap();
-            encoder
-                .write_header()
-                .unwrap()
-                .write_image_data(&rgba)
-                .unwrap();
-        }
-        let lossless = optimise(&bytes, &Options::default()).unwrap();
-        let out = quantize(
-            &bytes,
-            &Options::default(),
-            &Quantization {
-                max_colors: 16,
-                quality: 20,
-                dithering: 1.0,
-            },
-        )
-        .unwrap();
-        assert_eq!(out, lossless);
-        assert_eq!(decode(&out).unwrap().rgba, rgba);
+        let image = Image {
+            width: 32,
+            height: 32,
+            rgba,
+        };
+        let exact = Quantization {
+            max_colors: 256,
+            quality: 100,
+            dithering: 1.0,
+        };
+        assert_eq!(quantize(&image, &exact).unwrap(), None);
+        let coarse = Quantization {
+            max_colors: 4,
+            ..exact
+        };
+        let candidate = quantize(&image, &coarse).unwrap().unwrap();
+        let out = decode(&optimise(&candidate, &Options::default()).unwrap()).unwrap();
+        assert_ne!(out, image);
+        let colours: std::collections::BTreeSet<_> = out.rgba.as_chunks::<4>().0.iter().collect();
+        assert!(colours.len() <= 4, "{}", colours.len());
     }
 
     #[test]
@@ -506,33 +490,82 @@ mod tests {
     }
 
     #[test]
-    fn alpha_rewrite_and_single_color_downsize_are_explicit() {
+    fn clearing_transparent_colour_touches_only_hidden_pixels() {
         let image = Image {
-            width: 32,
-            height: 32,
-            rgba: (0..1024)
-                .flat_map(|i| [(i * 7) as u8, (i * 31) as u8, (i * 17) as u8, 0])
-                .collect(),
+            width: 2,
+            height: 2,
+            rgba: vec![7, 8, 9, 0, 1, 2, 3, 255, 0, 0, 0, 0, 4, 5, 6, 128],
         };
-        let bytes = encode(&image).unwrap();
+        let cleared = clear_transparent(&image).unwrap();
         assert_eq!(
-            decode(&optimise(&bytes, &Options::default()).unwrap()).unwrap(),
-            image
+            cleared.rgba,
+            [0, 0, 0, 0, 1, 2, 3, 255, 0, 0, 0, 0, 4, 5, 6, 128]
         );
-        let rewritten = optimise_alpha(&bytes, &Options::default()).unwrap();
-        assert!(decode(&rewritten).unwrap().rgba.iter().all(|&v| v == 0));
-        let color = Image {
-            rgba: [5, 8, 15, 255].repeat(1024),
-            ..image
-        };
-        let small = downsize_single_color(&encode(&color).unwrap(), &Options::default()).unwrap();
-        assert_eq!(
-            decode(&small).unwrap(),
-            Image {
-                width: 1,
-                height: 1,
-                rgba: vec![5, 8, 15, 255]
-            }
+        assert_eq!(clear_transparent(&cleared), None);
+    }
+
+    fn chunks(bytes: &[u8]) -> Vec<String> {
+        let mut names = Vec::new();
+        let mut rest = &bytes[8..];
+        while rest.len() >= 12 {
+            let len = u32::from_be_bytes(rest[..4].try_into().unwrap()) as usize;
+            names.push(String::from_utf8_lossy(&rest[4..8]).into_owned());
+            rest = &rest[12 + len..];
+        }
+        names
+    }
+
+    #[test]
+    fn stb_clients_lose_ancillary_chunks_and_sixteen_bit_samples_imageio_keeps_them() {
+        let mut bytes = Vec::new();
+        {
+            let mut encoder = png::Encoder::new(&mut bytes, 4, 4);
+            encoder.set_color(png::ColorType::Rgba);
+            encoder.set_depth(png::BitDepth::Sixteen);
+            encoder.set_source_gamma(png::ScaledFloat::new(0.45455));
+            encoder.set_source_srgb(png::SrgbRenderingIntent::Perceptual);
+            encoder.set_pixel_dims(Some(png::PixelDimensions {
+                xppu: 2835,
+                yppu: 2835,
+                unit: png::Unit::Meter,
+            }));
+            let pixels: Vec<u8> = (0..16u16)
+                .flat_map(|i| {
+                    let v = i * 4099;
+                    [v, v / 2, 65535 - v, 65535]
+                        .into_iter()
+                        .flat_map(u16::to_be_bytes)
+                })
+                .collect();
+            let mut writer = encoder.write_header().unwrap();
+            writer.write_image_data(&pixels).unwrap();
+        }
+        let before = decode(&bytes).unwrap();
+
+        let stb = optimise(&bytes, &Options::default()).unwrap();
+        assert_eq!(decode(&stb).unwrap(), before);
+        assert_eq!(stb[24], 8, "bit depth");
+        assert!(
+            chunks(&stb)
+                .iter()
+                .all(|c| ["IHDR", "PLTE", "tRNS", "IDAT", "IEND"].contains(&c.as_str())),
+            "{:?}",
+            chunks(&stb)
+        );
+
+        let imageio = optimise(
+            &bytes,
+            &Options {
+                imageio: true,
+                ..Options::default()
+            },
+        )
+        .unwrap();
+        assert_eq!(imageio[24], 16, "bit depth");
+        assert!(
+            chunks(&imageio).iter().any(|c| c == "sRGB"),
+            "{:?}",
+            chunks(&imageio)
         );
     }
 }

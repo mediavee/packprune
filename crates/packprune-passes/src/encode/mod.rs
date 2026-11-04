@@ -114,6 +114,7 @@ impl FileOptimizer for Png {
             keep_color_type: banner,
             keep_bit_depth: false,
             keep_grayscale: cx.quirks.imageio_grey,
+            imageio: cx.quirks.imageio_textures,
         };
         Ok(smaller(input, png::optimise(input, &options)))
     }

@@ -754,7 +754,7 @@ fn png_alpha_is_explicit_measured_and_protected_on_eyes_and_shader_targets() {
 }
 
 #[test]
-fn png_single_color_downsize_and_quantization_compare_to_lossless() {
+fn png_single_color_downsize_and_quantization_must_beat_their_input() {
     let image = Image {
         width: 32,
         height: 32,
@@ -781,9 +781,9 @@ fn png_single_color_downsize_and_quantization_compare_to_lossless() {
             })
             .collect(),
     };
-    let mut input = Vec::new();
-    // An ancillary chunk inflates the input without making quantisation beat the lossless encoding.
-    let mut encoder = ::png::Encoder::new(&mut input, 32, 32);
+    let mut raw = Vec::new();
+    // An ancillary chunk inflates the raw file; the lossless optimiser, which runs first, removes it.
+    let mut encoder = ::png::Encoder::new(&mut raw, 32, 32);
     encoder.set_color(::png::ColorType::Rgba);
     encoder
         .add_text_chunk("padding".into(), "x".repeat(4096))
@@ -791,6 +791,11 @@ fn png_single_color_downsize_and_quantization_compare_to_lossless() {
     let mut writer = encoder.write_header().unwrap();
     writer.write_image_data(&image.rgba).unwrap();
     writer.finish().unwrap();
+    let lossless = png::Options {
+        effort: DEFAULT_EFFORT,
+        ..png::Options::default()
+    };
+    let input = png::optimise(&raw, &lossless).unwrap();
     let (out, measured) = optimise_png(
         "png-quantize",
         &input,
@@ -798,11 +803,10 @@ fn png_single_color_downsize_and_quantization_compare_to_lossless() {
         Quirks::default(),
         "max_colors = 16\nquality = 20",
     );
-    let lossless = png::Options {
-        effort: DEFAULT_EFFORT,
-        ..png::Options::default()
-    };
-    assert_eq!(out, png::optimise(&input, &lossless).unwrap());
+    assert_eq!(
+        out, input,
+        "a palette of 16 greys does not beat the lossless 32-grey encoding"
+    );
     assert!(!measured);
 }
 
@@ -845,4 +849,34 @@ fn png_quantization_profitable_candidate_is_measured_and_threshold_checked() {
     );
     assert_eq!(png::decode(&out).unwrap(), image);
     assert!(!measured);
+}
+
+#[test]
+fn png_passes_leave_a_texture_they_would_not_change() {
+    let image = Image {
+        width: 16,
+        height: 16,
+        rgba: (0..256u32)
+            .flat_map(|i| [(i * 7) as u8, (i * 13) as u8, (i * 29) as u8, 255])
+            .collect(),
+    };
+    let input = rgba_png(&image).unwrap();
+    for (name, options) in [
+        ("png-alpha", ""),
+        ("png-quantize", "max_colors = 256\nquality = 100"),
+        ("png-single-color", ""),
+    ] {
+        let optimiser = super::optimisers()
+            .into_iter()
+            .find(|pass| pass.name() == name)
+            .unwrap();
+        let out = optimiser
+            .optimise(
+                &input,
+                &png_context(BIG, Quirks::default()),
+                &options.parse().unwrap(),
+            )
+            .unwrap();
+        assert!(out.is_none(), "{name}");
+    }
 }

@@ -827,7 +827,7 @@ fn partial_io_errors_name_the_path() {
 }
 
 #[test]
-fn encoder_tries_zopfli_only_for_text_at_maximum_effort() {
+fn encoder_tries_zopfli_on_compressible_entries_at_maximum_effort() {
     let bytes = b"{\"value\":123}".repeat(100);
     let fast_options = CompressOptions::default();
     let max_options = CompressOptions {
@@ -844,8 +844,24 @@ fn encoder_tries_zopfli_only_for_text_at_maximum_effort() {
     assert_eq!(max.size, bytes.len() as u64);
     assert_eq!(max.crc, crc32fast::hash(&bytes));
     for class in [EntryClass::Other, EntryClass::Compressed] {
-        assert_eq!(encode(&bytes, class, &max_options), fast);
+        assert_eq!(encode(&bytes, class, &max_options), max);
     }
+    // Barely compressible data, as PNG is, keeps libdeflate's output.
+    let mut seed = 7u32;
+    let mut noisy: Vec<u8> = (0..8192)
+        .map(|_| {
+            seed ^= seed << 13;
+            seed ^= seed >> 17;
+            seed ^= seed << 5;
+            seed as u8
+        })
+        .collect();
+    // Zopfli saves 23 bytes here, but libdeflate only 0.18 % of the entry.
+    noisy.extend(b"{\"value\":123}".repeat(6));
+    assert_eq!(
+        encode(&noisy, EntryClass::Compressed, &max_options),
+        encode(&noisy, EntryClass::Compressed, &fast_options)
+    );
 }
 
 #[test]

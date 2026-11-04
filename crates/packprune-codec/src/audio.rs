@@ -331,45 +331,20 @@ pub fn optimise(bytes: &[u8]) -> Result<Vec<u8>, CodecError> {
     let out = remuxer
         .remux(Cursor::new(bytes), Vec::new())
         .map_err(|e| invalid("Ogg", e))?;
-    let out = if same_client_packets(bytes, &out)? {
-        out
-    } else if let Some(candidate) = ogg::compatible_rewrite(bytes, &out, OGG_STREAM_SERIAL)? {
-        candidate
-    } else {
-        return Ok(bytes.to_vec());
+    let plays_alike = |candidate: &[u8]| {
+        candidate.len() < bytes.len() && decode(candidate).is_ok_and(|after| after == before)
     };
-    if !decode(&out).is_ok_and(|after| after == before) {
-        return Ok(bytes.to_vec());
+    // OptiVorbis's own pages are the fewest. `decode` follows JOrbis's page granules, so the same PCM means the
+    // client plays them alike; otherwise the input's page groups keep its timing.
+    if ogg::compatible_headers(bytes, &out)? && plays_alike(&out) {
+        return Ok(out);
     }
-    Ok(if out.len() < bytes.len() {
-        out
-    } else {
-        bytes.to_vec()
-    })
-}
-
-fn same_client_packets(before: &[u8], after: &[u8]) -> Result<bool, CodecError> {
-    let mut before = PacketReader::new(Cursor::new(before));
-    let mut after = PacketReader::new(Cursor::new(after));
-    loop {
-        let a = before.read_packet().map_err(|e| invalid("Ogg", e))?;
-        let b = after.read_packet().map_err(|e| invalid("Ogg", e))?;
-        match (a, b) {
-            (None, None) => return Ok(true),
-            (Some(a), Some(b)) => {
-                if a.data != b.data
-                    || a.absgp_page() != b.absgp_page()
-                    || a.first_in_page() != b.first_in_page()
-                    || a.last_in_page() != b.last_in_page()
-                    || a.first_in_stream() != b.first_in_stream()
-                    || a.last_in_stream() != b.last_in_stream()
-                {
-                    return Ok(false);
-                }
-            }
-            _ => return Ok(false),
-        }
-    }
+    Ok(
+        match ogg::compatible_rewrite(bytes, &out, OGG_STREAM_SERIAL)? {
+            Some(candidate) if plays_alike(&candidate) => candidate,
+            _ => bytes.to_vec(),
+        },
+    )
 }
 
 pub fn optimise_empty(bytes: &[u8]) -> Result<Vec<u8>, CodecError> {
@@ -468,14 +443,13 @@ mod tests {
 
     #[test]
     fn client_rejects_zero_entry_codebooks() {
-        assert!(decode(include_bytes!("fixtures/vorbis-rewritten-client.ogg")).is_ok());
-        assert!(
-            !same_client_packets(
-                include_bytes!("fixtures/vorbis-client.ogg"),
-                include_bytes!("fixtures/vorbis-rewritten-client.ogg")
-            )
-            .unwrap()
-        );
+        let client = include_bytes!("fixtures/vorbis-client.ogg");
+        // JOrbis 0.0.17 plays this rewrite as the original; it fails on the zero-entry variant.
+        let rewritten = include_bytes!("fixtures/vorbis-rewritten-client.ogg");
+        assert_eq!(decode(rewritten).unwrap(), decode(client).unwrap());
+        assert!(ogg::compatible_headers(client, rewritten).unwrap());
+        let zero_entry = include_bytes!("fixtures/vorbis-zero-entry.ogg");
+        assert!(!ogg::compatible_headers(client, zero_entry).unwrap());
         // JOrbis 0.0.17 decodes the originals; both rewritten files fail in make_decode_tree.
         for (original, broken) in [
             (
@@ -580,7 +554,22 @@ mod tests {
         // JOrbis rejects the zero framing bit; Symphonia's metadata reader ignores it.
         let valid = include_bytes!("fixtures/vorbis-client.ogg");
         let invalid = include_bytes!("fixtures/vorbis-comment-framing.ogg");
-        assert!(!same_client_packets(valid, invalid).unwrap());
+        assert!(!ogg::compatible_headers(valid, invalid).unwrap());
+    }
+
+    #[test]
+    fn pages_merge_only_when_the_client_plays_them_alike() {
+        let pages = |d: &[u8]| d.windows(4).filter(|w| w == b"OggS").count();
+        let low = include_bytes!("fixtures/vorbis-granule-low.ogg");
+        let out = optimise(low).unwrap();
+        assert!(pages(&out) < pages(low));
+        assert_eq!(decode(&out).unwrap(), decode(low).unwrap());
+        // Granules past the decoded samples move JOrbis's count, so the input's page groups stay.
+        let high = include_bytes!("fixtures/vorbis-granule-high.ogg");
+        let out = optimise(high).unwrap();
+        assert!(out.len() < high.len());
+        assert_eq!(pages(&out), pages(high));
+        assert_eq!(decode(&out).unwrap(), decode(high).unwrap());
     }
 
     #[test]

@@ -5,6 +5,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use camino::{Utf8Path, Utf8PathBuf};
+use packprune_codec::png;
 use packprune_config::{PassSelection, Profile};
 use packprune_pack::{FileKind, Limits, PackInput, PhysPath};
 use packprune_pass::{Analysed, Context, FileCx, FileOptimizer, Loss, Optimised, PassError};
@@ -1267,7 +1268,10 @@ fn a_lossless_optimiser_rewriting_rgb_under_alpha_0_is_refused() {
             _: &FileCx,
             _: &toml::Table,
         ) -> Result<Option<Optimised>, PassError> {
-            let bytes = packprune_codec::png::optimise_alpha(input, &Default::default()).unwrap();
+            let image = png::decode(input).unwrap();
+            let cleared = png::clear_transparent(&image).unwrap_or(image);
+            let bytes =
+                png::optimise(&png::encode(&cleared).unwrap(), &Default::default()).unwrap();
             Ok(Some(Optimised { bytes, loss: None }))
         }
     }
@@ -1333,7 +1337,10 @@ fn a_lossless_error_is_refused_beside_an_opted_in_lossy_rewrite() {
             _: &FileCx,
             _: &toml::Table,
         ) -> Result<Option<Optimised>, PassError> {
-            let bytes = packprune_codec::png::optimise_alpha(input, &Default::default()).unwrap();
+            let image = png::decode(input).unwrap();
+            let cleared = png::clear_transparent(&image).unwrap_or(image);
+            let bytes =
+                png::optimise(&png::encode(&cleared).unwrap(), &Default::default()).unwrap();
             Ok(Some(Optimised { bytes, loss: None }))
         }
     }

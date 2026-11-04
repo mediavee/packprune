@@ -165,10 +165,14 @@ fn request(settings: &Settings, config: Utf8PathBuf) -> Result<Request, RunError
 /// The settings' quirk names, PackSquash 0.4.1's.
 fn quirks(names: &[String]) -> Quirks {
     let named = |name: &str| names.iter().any(|quirk| quirk == name);
+    let imageio_grey = named("grayscale_images_gamma_miscorrection");
+    let abgr_layers = named("restrictive_banner_layer_texture_format_check");
     Quirks {
-        imageio_grey: named("grayscale_images_gamma_miscorrection"),
-        abgr_layers: named("restrictive_banner_layer_texture_format_check"),
+        imageio_grey,
+        abgr_layers,
         additive_eyes: named("bad_entity_eye_layer_texture_transparency_blending"),
+        // Both name a client that decodes textures with javax.imageio.
+        imageio_textures: imageio_grey || abgr_layers,
     }
 }
 
