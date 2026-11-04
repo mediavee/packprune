@@ -239,7 +239,7 @@ settings and the input are accepted, a pack always ships, and never one that pac
 | write or compression error | none, exit 3 |
 
 The report of the last run goes to `latest/` in `[report] dir` (default `reports` beside the config). Its
-files are replaced by name, and nothing else in that folder is touched. See [install](install.md) for the
+files are replaced by name, and nothing else in that folder is touched. See [Nexo](nexo.md) for the
 setup.
 
 ## Gate
