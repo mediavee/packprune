@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="174" viewBox="0 0 720 174" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Helvetica, Arial, sans-serif" font-size="14">
+<text x="138" y="31" text-anchor="end" fill="#f0f6fc" font-weight="400">PackSquash</text>
+<rect x="150" y="16" width="500.0" height="22" rx="3" fill="#656c76"/>
+<text x="658.0" y="31" fill="#9198a1">339.2 s</text>
+<text x="138" y="75" text-anchor="end" fill="#f0f6fc" font-weight="600">packprune</text>
+<rect x="150" y="60" width="241.1" height="22" rx="3" fill="#3fb950"/>
+<text x="399.1" y="75" fill="#9198a1">163.6 s</text>
+<text x="138" y="119" text-anchor="end" fill="#f0f6fc" font-weight="600">packprune, cached</text>
+<rect x="150" y="104" width="2.0" height="22" rx="3" fill="#3fb950"/>
+<text x="159.9" y="119" fill="#9198a1">1.3 s</text>
+<line x1="150" y1="148" x2="650" y2="148" stroke="#3d444d"/>
+<text x="150" y="168" fill="#9198a1" font-size="12">0 s</text>
+</svg>

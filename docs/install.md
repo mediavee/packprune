@@ -14,12 +14,11 @@ Every [release](https://github.com/mediavee/packprune/releases) has one executab
 
 The Linux binaries are static: they run on any distribution and in distroless images.
 
-Check it against `SHA256SUMS` before installing:
+Check it against `SHA256SUMS` before installing (this fetches the latest release; add a tag for another one):
 
 ```sh
-tag=v2.0.0   # the release you want
 asset=packprune-x86_64-unknown-linux-musl
-gh release download "$tag" --repo mediavee/packprune --pattern "$asset" --pattern SHA256SUMS
+gh release download --repo mediavee/packprune --pattern "$asset" --pattern SHA256SUMS
 grep "  $asset$" SHA256SUMS | sha256sum --check -
 install -m 755 "$asset" ~/.local/bin/packprune
 ```
