@@ -7,7 +7,7 @@ use crate::cost::{AtlasCost, Cost, FontCost};
 /// A report of schema 4 with one finding in a subset of the views.
 const SAMPLE: &str = r#"{
   "schema": 4,
-  "tool": { "name": "packprune", "version": "2.0.0-dev" },
+  "tool": { "name": "packprune", "version": "2.0.0" },
   "inputs": {
     "pack": { "name": "p.zip", "sha256": "aa" },
     "clientJar": { "name": "c.jar", "sha256": "bb" },

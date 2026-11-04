@@ -557,7 +557,7 @@ dependencies = [
 
 [[package]]
 name = "packprune-codec"
-version = "2.0.0-dev"
+version = "2.0.0"
 dependencies = [
  "flate2",
  "imagequant",
@@ -577,7 +577,7 @@ dependencies = [
 
 [[package]]
 name = "packprune-pack"
-version = "2.0.0-dev"
+version = "2.0.0"
 dependencies = [
  "blake3",
  "camino",
@@ -593,7 +593,7 @@ dependencies = [
 
 [[package]]
 name = "packprune-zip"
-version = "2.0.0-dev"
+version = "2.0.0"
 dependencies = [
  "camino",
  "crc32fast",

@@ -610,7 +610,7 @@ dependencies = [
 
 [[package]]
 name = "packprune-codec"
-version = "2.0.0-dev"
+version = "2.0.0"
 dependencies = [
  "flate2",
  "imagequant",
@@ -630,7 +630,7 @@ dependencies = [
 
 [[package]]
 name = "packprune-config"
-version = "2.0.0-dev"
+version = "2.0.0"
 dependencies = [
  "camino",
  "globset",
@@ -656,7 +656,7 @@ dependencies = [
 
 [[package]]
 name = "packprune-graph"
-version = "2.0.0-dev"
+version = "2.0.0"
 dependencies = [
  "camino",
  "packprune-pack",
@@ -667,12 +667,11 @@ dependencies = [
 
 [[package]]
 name = "packprune-pack"
-version = "2.0.0-dev"
+version = "2.0.0"
 dependencies = [
  "blake3",
  "camino",
  "libc",
- "memmap2",
  "packprune-zip",
  "rayon",
  "regex",
@@ -684,22 +683,20 @@ dependencies = [
 
 [[package]]
 name = "packprune-sources"
-version = "2.0.0-dev"
+version = "2.0.0"
 dependencies = [
  "blake3",
  "camino",
  "packprune-codec",
  "packprune-graph",
  "packprune-pack",
- "rayon",
  "saphyr-parser",
  "serde_json",
- "thiserror",
 ]
 
 [[package]]
 name = "packprune-zip"
-version = "2.0.0-dev"
+version = "2.0.0"
 dependencies = [
  "camino",
  "crc32fast",
