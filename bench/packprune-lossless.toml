@@ -2,4 +2,4 @@ version = 2
 
 [profiles.default]
 passes = "lossless"
-zip = { mode = "conformant" }
+zip = { mode = "conformant", effort = 255 }

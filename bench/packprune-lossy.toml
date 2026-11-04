@@ -2,6 +2,7 @@ version = 2
 
 [profiles.default]
 passes = "lossless"
+zip = { effort = 255 }
 
 [profiles.default.lossy.png-quantize]
 globs = ["**/*.png"]
