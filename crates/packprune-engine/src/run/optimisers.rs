@@ -269,6 +269,7 @@ fn quirks_at(format: (u32, u32)) -> Quirks {
         imageio_grey: !stb_textures,
         abgr_layers: !stb_textures,
         additive_eyes: format < (40, 0),
+        imageio_textures: !stb_textures,
     }
 }
 
@@ -277,6 +278,7 @@ fn union(a: Quirks, b: Quirks) -> Quirks {
         imageio_grey: a.imageio_grey || b.imageio_grey,
         abgr_layers: a.abgr_layers || b.abgr_layers,
         additive_eyes: a.additive_eyes || b.additive_eyes,
+        imageio_textures: a.imageio_textures || b.imageio_textures,
     }
 }
 

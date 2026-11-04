@@ -5,7 +5,7 @@ use flate2::read::MultiGzDecoder;
 
 use crate::{CodecError, MAX_DECODED_BYTES, invalid, zopfli_iterations};
 
-/// The largest payload Zopfli compresses: 512 KiB, about 2 s at the default effort.
+/// The Zopfli time budget of a payload: what 512 KiB takes at the default effort, about 2 s.
 const ZOPFLI_BYTES: usize = 512 * 1024;
 
 pub fn decompress(bytes: &[u8]) -> Result<Vec<u8>, CodecError> {

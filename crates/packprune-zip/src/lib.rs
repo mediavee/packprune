@@ -51,7 +51,7 @@ pub enum EntryClass {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct CompressOptions {
-    /// 0 stores, 1..=254 uses libdeflate-12, 255 also tries size-scaled Zopfli on text.
+    /// 0 stores, 1..=254 uses libdeflate-12, 255 also tries size-scaled Zopfli.
     pub effort: u8,
     pub recompress_compressed: bool,
 }
@@ -74,7 +74,7 @@ pub struct Encoded {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct WriteOptions {
     pub mode: ZipMode,
-    /// 0 stores, 1..=254 uses libdeflate-12, 255 also tries size-scaled Zopfli on text.
+    /// 0 stores, 1..=254 uses libdeflate-12, 255 also tries size-scaled Zopfli.
     pub effort: u8,
     pub recompress_compressed: bool,
     pub comment: Option<String>,

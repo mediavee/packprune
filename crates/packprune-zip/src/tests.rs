@@ -827,7 +827,7 @@ fn partial_io_errors_name_the_path() {
 }
 
 #[test]
-fn encoder_tries_zopfli_only_for_text_at_maximum_effort() {
+fn encoder_tries_zopfli_on_every_class_at_maximum_effort() {
     let bytes = b"{\"value\":123}".repeat(100);
     let fast_options = CompressOptions::default();
     let max_options = CompressOptions {
@@ -844,7 +844,7 @@ fn encoder_tries_zopfli_only_for_text_at_maximum_effort() {
     assert_eq!(max.size, bytes.len() as u64);
     assert_eq!(max.crc, crc32fast::hash(&bytes));
     for class in [EntryClass::Other, EntryClass::Compressed] {
-        assert_eq!(encode(&bytes, class, &max_options), fast);
+        assert_eq!(encode(&bytes, class, &max_options), max);
     }
 }
 

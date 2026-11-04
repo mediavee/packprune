@@ -4,23 +4,19 @@ use ::ogg::{Packet, PacketReader, PacketWriteEndInfo, PacketWriter};
 
 use crate::{CodecError, invalid, vorbis_client};
 
-pub(super) fn compatible_rewrite(
-    before: &[u8],
-    after: &[u8],
-    serial: u32,
-) -> Result<Option<Vec<u8>>, CodecError> {
+/// Whether `after` has as many packets as `before` and headers JOrbis reads alike: the same identification header,
+/// framed comments and a setup with the same client-safe codebooks and configurations.
+pub(super) fn compatible_headers(before: &[u8], after: &[u8]) -> Result<bool, CodecError> {
     let mut before = PacketReader::new(Cursor::new(before));
     let mut after = PacketReader::new(Cursor::new(after));
-    let mut writer = PacketWriter::new(Vec::new());
-    let mut timing = Vec::new();
     let mut index = 0;
     loop {
         let a = before.read_packet().map_err(|e| invalid("Ogg", e))?;
         let b = after.read_packet().map_err(|e| invalid("Ogg", e))?;
         let (a, b) = match (a, b) {
-            (None, None) => break,
+            (None, None) => return Ok(true),
             (Some(a), Some(b)) => (a, b),
-            _ => return Ok(None),
+            _ => return Ok(false),
         };
         let compatible = match index {
             0 => a.data == b.data,
@@ -29,8 +25,33 @@ pub(super) fn compatible_rewrite(
             _ => true,
         };
         if !compatible {
-            return Ok(None);
+            return Ok(false);
         }
+        index += 1;
+    }
+}
+
+/// `after`'s packets in `before`'s page groups and granules.
+pub(super) fn compatible_rewrite(
+    before: &[u8],
+    after: &[u8],
+    serial: u32,
+) -> Result<Option<Vec<u8>>, CodecError> {
+    if !compatible_headers(before, after)? {
+        return Ok(None);
+    }
+    let mut before = PacketReader::new(Cursor::new(before));
+    let mut after = PacketReader::new(Cursor::new(after));
+    let mut writer = PacketWriter::new(Vec::new());
+    let mut timing = Vec::new();
+    loop {
+        let a = before.read_packet().map_err(|e| invalid("Ogg", e))?;
+        let b = after.read_packet().map_err(|e| invalid("Ogg", e))?;
+        let (a, b) = match (a, b) {
+            (None, None) => break,
+            (Some(a), Some(b)) => (a, b),
+            _ => return Ok(None),
+        };
         timing.push(packet_timing(&a));
         let end = if a.last_in_stream() {
             PacketWriteEndInfo::EndStream
@@ -43,7 +64,6 @@ pub(super) fn compatible_rewrite(
         writer
             .write_packet(b.data, serial, end, a.absgp_page())
             .map_err(|e| invalid("Ogg", e))?;
-        index += 1;
     }
     let out = writer.into_inner();
     let mut reader = PacketReader::new(Cursor::new(&out));

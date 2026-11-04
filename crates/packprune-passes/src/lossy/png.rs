@@ -171,57 +171,56 @@ impl FileOptimizer for Png {
             effort: options.effort,
             keep_color_type: cx.quirks.abgr_layers && layers.banner,
             keep_grayscale: cx.quirks.imageio_grey,
+            imageio: cx.quirks.imageio_textures,
             ..Default::default()
         };
         let failed = |e| PassError::Failed {
             pass: self.name(),
             why: format!("{}: {e}", cx.path),
         };
+        // Additive eyes show the colour under transparent texels, and effect textures are shader data: a palette or
+        // an alpha rewrite changes both. A banner layer under its quirk must keep its colour type.
+        if cx.quirks.additive_eyes && layers.eyes || layers.effect || codec.keep_color_type {
+            return Ok(None);
+        }
         // An input the codec refuses (a corrupt chunk, say) stays as it is, as the lossless optimiser leaves it.
-        let (Ok(before), Ok(lossless)) = (png::decode(input), png::optimise(input, &codec)) else {
+        let Ok(before) = png::decode(input) else {
             return Ok(None);
         };
-        // Additive eyes show the colour under transparent texels, and effect textures are shader data: a palette or
-        // an alpha rewrite changes both, so they get the lossless output only.
-        let protected = cx.quirks.additive_eyes && layers.eyes || layers.effect;
-        let bytes = if protected {
-            lossless.clone()
-        } else {
-            match self {
-                Self::Alpha => png::optimise_alpha(input, &codec),
-                Self::Quantize => png::quantize(input, &codec, &options.quantization),
-                Self::SingleColor => {
-                    let side = uniform_side(before.width, before.height);
-                    if !codec.keep_color_type
-                        && side < before.width.min(before.height)
-                        && before
-                            .rgba
-                            .as_chunks::<4>()
-                            .0
-                            .iter()
-                            .all(|p| p == &before.rgba[..4])
-                    {
-                        let small = png::Image {
+        // The lossless optimisers ran first, so the input is what a candidate must beat.
+        let candidate = match self {
+            Self::Alpha => png::clear_transparent(&before)
+                .map(|image| png::encode(&image))
+                .transpose(),
+            Self::Quantize => png::quantize(&before, &options.quantization),
+            Self::SingleColor => {
+                let side = uniform_side(before.width, before.height);
+                let uniform = side < before.width.min(before.height)
+                    && before
+                        .rgba
+                        .as_chunks::<4>()
+                        .0
+                        .iter()
+                        .all(|p| p == &before.rgba[..4]);
+                uniform
+                    .then(|| {
+                        png::encode(&png::Image {
                             width: side,
                             height: side,
                             rgba: before.rgba[..4].repeat((side * side) as usize),
-                        };
-                        png::encode(&small)
-                            .and_then(|bytes| png::optimise(&bytes, &codec))
-                            .map(|candidate| {
-                                if candidate.len() < lossless.len() {
-                                    candidate
-                                } else {
-                                    lossless.clone()
-                                }
-                            })
-                    } else {
-                        Ok(lossless.clone())
-                    }
-                }
+                        })
+                    })
+                    .transpose()
             }
-            .map_err(failed)?
+        }
+        .map_err(failed)?;
+        let Some(candidate) = candidate else {
+            return Ok(None);
         };
+        let bytes = png::optimise(&candidate, &codec).map_err(failed)?;
+        if bytes.len() >= input.len() {
+            return Ok(None);
+        }
         let after = png::decode(&bytes).map_err(failed)?;
         let loss =
             metrics::image_loss(&before, &after, after.width, after.height).map_err(failed)?;
@@ -239,15 +238,10 @@ impl FileOptimizer for Png {
         };
         let accepted = options.min_ssim.is_none_or(|limit| loss.ssim >= limit)
             && options.max_delta.is_none_or(|limit| delta <= limit);
-        let (bytes, changed_pixels) = if accepted {
-            (bytes, before != after)
-        } else {
-            (lossless, false)
-        };
-        if bytes == input {
+        if !accepted {
             return Ok(None);
         }
-        let record = changed_pixels.then(|| LossRecord {
+        let record = (before != after).then(|| LossRecord {
             key: cx.path.to_string(),
             metric: if matches!(self, Self::Alpha) {
                 "max_delta"

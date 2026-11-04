@@ -59,6 +59,9 @@ pub struct Quirks {
     pub abgr_layers: bool,
     /// `RenderType.eyes` blends with `ONE, ONE` (fixed in 24w39a, MC-235953): a transparent texel's colour adds.
     pub additive_eyes: bool,
+    /// Textures go through `javax.imageio` (before 1.13). Without it, stb_image ignores every PNG chunk but the
+    /// image data and transparency, and keeps the high byte of a 16-bit sample.
+    pub imageio_textures: bool,
 }
 
 impl ViewSet {

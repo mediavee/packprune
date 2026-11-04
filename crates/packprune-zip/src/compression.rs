@@ -12,7 +12,6 @@ pub(crate) fn compress(
     }
     let mut best = libdeflate(bytes);
     if options.effort == u8::MAX
-        && class == EntryClass::Text
         && let Some(zopfli) = zopfli(bytes)
         && zopfli.len() < best.len()
     {

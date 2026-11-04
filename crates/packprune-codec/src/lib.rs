@@ -28,15 +28,12 @@ fn invalid(kind: &'static str, why: impl Display) -> CodecError {
 /// The default `effort` of the PNG and NBT optimisers: zopfli's own default iteration count.
 pub const DEFAULT_EFFORT: u8 = 15;
 
-/// Zopfli iterations for an input of `size` units at `effort`: `effort` up to `limit` units, capped at
-/// [`DEFAULT_EFFORT`] since measured outputs stop shrinking by about ten. Above `limit`, 0 (the caller's fast
-/// deflater): even one iteration's time grows with the input.
+/// Zopfli iterations for an input of `size` units at `effort`, capped at [`DEFAULT_EFFORT`] since measured outputs
+/// stop shrinking by about ten. Iterations × size stays within what `limit` units take at that effort, so a larger
+/// input gets fewer iterations, and 0 (the caller's fast deflater) once one would exceed it.
 fn zopfli_iterations(effort: u8, size: usize, limit: usize) -> u64 {
-    if size > limit {
-        0
-    } else {
-        u64::from(effort.min(DEFAULT_EFFORT))
-    }
+    let iterations = u64::from(effort.min(DEFAULT_EFFORT));
+    iterations.min(iterations * limit as u64 / size.max(1) as u64)
 }
 
 #[derive(Debug, thiserror::Error)]
