@@ -1,0 +1,28 @@
+pack_directory = '${PACK_DIRECTORY}'
+output_file_path = '${OUTPUT_FILE_PATH}'
+validate_pack_metadata_file = false
+automatic_minecraft_quirks_detection = false
+automatic_asset_types_mask_detection = false
+work_around_minecraft_quirks = []
+recompress_compressed_files = true
+zip_compression_iterations = 255
+never_store_squash_times = true
+zip_spec_conformance_level = 'balanced'
+
+['{**/*?.png}']
+image_data_compression_iterations = 255
+color_quantization_target = 'auto'
+skip_alpha_optimizations = false
+
+['**/*?.ogg']
+transcode_ogg = true
+
+['20-3/**']
+force_include = true
+
+['21-2/**']
+force_include = true
+
+['21-5/**']
+force_include = true
+

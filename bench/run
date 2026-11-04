@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+# Times PackSquash and packprune on the public packs of packs.tsv, one run at a time, and writes
+# <work>/results.tsv. Usage: PACKSQUASH=<binary> PACKPRUNE=<binary> bench/run <work dir> [pack...]
+set -uo pipefail
+bench=$(cd "$(dirname "$0")" && pwd)
+work=$(mkdir -p "$1" && cd "$1" && pwd)
+shift
+: "${PACKSQUASH:?path to the PackSquash 0.4.1 binary}" "${PACKPRUNE:?path to the packprune binary}"
+
+now() { perl -MTime::HiRes=time -e 'printf "%.2f", time'; }
+sha256() { if command -v sha256sum >/dev/null; then sha256sum "$1"; else shasum -a 256 "$1"; fi | cut -d' ' -f1; }
+sha1() { if command -v sha1sum >/dev/null; then sha1sum "$1"; else shasum -a 1 "$1"; fi | cut -d' ' -f1; }
+fetch() { # url file expected-hash hash-function
+    [ -f "$2" ] && [ "$($4 "$2")" = "$3" ] && return
+    curl -fsSL --retry 3 -o "$2" "$1" && [ "$($4 "$2")" = "$3" ] || { echo "bad download: $1" >&2; exit 1; }
+}
+
+# The vanilla 26.2 client and its asset index, from Mojang.
+mkdir -p "$work/vanilla" "$work/packs" "$work/out"
+jar=$work/vanilla/client-26.2.jar index=$work/vanilla/32.json
+fetch https://piston-data.mojang.com/v1/objects/2dc72797acbc1b63fc16a11c4ac393605f453754/client.jar \
+    "$jar" 2dc72797acbc1b63fc16a11c4ac393605f453754 sha1
+fetch https://piston-meta.mojang.com/v1/packages/56a546ca1ea01548679d6b4269363d0c6697a454/32.json \
+    "$index" 56a546ca1ea01548679d6b4269363d0c6697a454 sha1
+
+results=$work/results.tsv
+printf 'pack\trun\texit\tbytes\tseconds\n' > "$results"
+row() { # pack run command...
+    local pack=$1 run=$2 start code; shift 2
+    start=$(now)
+    "$@" > "$work/out/$pack.$run.log" 2>&1
+    code=$?
+    printf '%s\t%s\t%s\t%s\t%s\n' "$pack" "$run" "$code" \
+        "$(if [ -f "$work/out/$pack.$run.zip" ]; then wc -c < "$work/out/$pack.$run.zip" | tr -d ' '; else echo 0; fi)" \
+        "$(perl -e "printf '%.2f', $(now) - $start")" >> "$results"
+}
+
+grep -v '^#' "$bench/packs.tsv" | while IFS=$'\t' read -r pack url sum; do
+    [ $# -eq 0 ] || [[ " $* " == *" $pack "* ]] || continue
+    input=$work/packs/$pack.zip
+    fetch "$url" "$input" "$sum" sha256
+    printf '%s\tinput\t0\t%s\t\n' "$pack" "$(wc -c < "$input" | tr -d ' ')" >> "$results"
+    dir=$work/extract/$pack
+    rm -rf "$dir" && mkdir -p "$dir" && unzip -q -o "$input" -d "$dir"
+
+    for kind in lossless lossy; do
+        settings=$work/out/$pack.packsquash-$kind.toml
+        sed "s#\${PACK_DIRECTORY}#$dir#; s#\${OUTPUT_FILE_PATH}#$work/out/$pack.packsquash-$kind.zip#" \
+            "$bench/packsquash/$pack-$kind.toml" > "$settings"
+        row "$pack" "packsquash-$kind" env HOME="$(mktemp -d)" "$PACKSQUASH" "$settings"
+
+        cache=$(mktemp -d)
+        for run in "$kind" "$kind-cached"; do
+            row "$pack" "packprune-$run" env PACKPRUNE_CACHE="$cache" "$PACKPRUNE" optimise "$input" \
+                -o "$work/out/$pack.packprune-$run.zip" --config "$bench/packprune-$kind.toml" \
+                --client-jar "$jar" --asset-index "$index"
+        done
+        rm -rf "$cache"
+    done
+done

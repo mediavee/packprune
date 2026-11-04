@@ -1,0 +1,5 @@
+version = 2
+
+[profiles.default]
+passes = "lossless"
+zip = { mode = "conformant" }

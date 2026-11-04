@@ -1,0 +1,45 @@
+name: bench
+
+# PackSquash against packprune on the public packs of bench/packs.tsv. Runs on demand and when the
+# benchmark itself changes; the results are in the job summary and the artifact.
+on:
+  workflow_dispatch:
+  pull_request:
+    paths: ['bench/**', '.github/workflows/bench.yml']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  bench:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build packprune
+        run: cargo build --release --locked -p packprune-cli
+      - name: PackSquash 0.4.1
+        run: |
+          curl -fsSLo packsquash.zip \
+            https://github.com/ComunidadAylas/PackSquash/releases/download/v0.4.1/packsquash-x86_64-unknown-linux-musl.zip
+          echo "9898d771ec4faa2528e768610c99997f94cae570ee867b4af1b8aa56cce44ce4  packsquash.zip" | sha256sum -c -
+          unzip -q packsquash.zip -d "$RUNNER_TEMP/packsquash"
+      - name: Run
+        env:
+          PACKSQUASH: ${{ runner.temp }}/packsquash/packsquash
+          PACKPRUNE: ${{ github.workspace }}/target/release/packprune
+        run: |
+          nproc
+          bench/run "$RUNNER_TEMP/bench"
+          bench/summary "$RUNNER_TEMP/bench/results.tsv" >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: ${{ always() }}
+        with:
+          name: bench
+          path: |
+            ${{ runner.temp }}/bench/results.tsv
+            ${{ runner.temp }}/bench/out/*.log

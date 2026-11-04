@@ -1,0 +1,106 @@
+#!/usr/bin/env python3
+"""Prints bench/run's results.tsv as a Markdown table; with --svg DIR, also writes the README time chart."""
+
+import argparse
+import csv
+from pathlib import Path
+
+PACKS = {
+    "faithful-32x": "Faithful 32x",
+    "faithful-64x": "Faithful 64x",
+    "guns-plus-plus": "Guns++",
+    "ctm-overhaul": "CTM Overhaul",
+    "enhanced-audio": "Enhanced Audio",
+}
+THEMES = {
+    "light": {"text": "#1f2328", "muted": "#59636e", "grid": "#d1d9e0", "bar": "#afb8c1", "accent": "#1a7f37"},
+    "dark": {"text": "#f0f6fc", "muted": "#9198a1", "grid": "#3d444d", "bar": "#656c76", "accent": "#3fb950"},
+}
+
+
+def load(path):
+    runs = {}
+    for row in csv.DictReader(open(path), delimiter="\t"):
+        ok = row["exit"] == "0" and int(row["bytes"]) > 0
+        runs.setdefault(row["pack"], {})[row["run"]] = (
+            int(row["bytes"]) if ok else None,
+            float(row["seconds"]) if row["seconds"] else None,
+        )
+    return runs
+
+
+def mb(size):
+    return "failed" if size is None else f"{size / 1e6:.2f}"
+
+
+def seconds(run):
+    return "failed" if run[0] is None else f"{run[1]:.1f}"
+
+
+def table(runs):
+    lines = []
+    for kind in ("lossless", "lossy"):
+        lines += [
+            f"| {kind.capitalize()} | Input MB | PackSquash MB | packprune MB | PackSquash s | packprune s | packprune cached s |",
+            "|---|---:|---:|---:|---:|---:|---:|",
+        ]
+        for pack, name in PACKS.items():
+            r = runs.get(pack)
+            if not r:
+                continue
+            ps, pp, cached = r[f"packsquash-{kind}"], r[f"packprune-{kind}"], r[f"packprune-{kind}-cached"]
+            lines.append(
+                f"| {name} | {mb(r['input'][0])} | {mb(ps[0])} | {mb(pp[0])} | {seconds(ps)} | {seconds(pp)} | {seconds(cached)} |"
+            )
+        lines.append("")
+    return "\n".join(lines)
+
+
+def chart(bars, theme):
+    """Horizontal bars, one per (label, seconds, highlighted)."""
+    c = THEMES[theme]
+    width, left, right, row = 720, 150, 70, 44
+    top = 12
+    height = top + row * len(bars) + 30
+    scale = (width - left - right) / max(value for _, value, _ in bars)
+    out = [
+        f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}" '
+        'font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Helvetica, Arial, sans-serif" font-size="14">'
+    ]
+    for i, (label, value, highlight) in enumerate(bars):
+        y = top + i * row
+        weight = "600" if highlight else "400"
+        out.append(f'<text x="{left - 12}" y="{y + 19}" text-anchor="end" fill="{c["text"]}" font-weight="{weight}">{label}</text>')
+        out.append(
+            f'<rect x="{left}" y="{y + 4}" width="{max(value * scale, 2):.1f}" height="22" rx="3" '
+            f'fill="{c["accent"] if highlight else c["bar"]}"/>'
+        )
+        out.append(f'<text x="{left + value * scale + 8:.1f}" y="{y + 19}" fill="{c["muted"]}">{value:.1f} s</text>')
+    axis = top + row * len(bars) + 4
+    out.append(f'<line x1="{left}" y1="{axis}" x2="{width - right}" y2="{axis}" stroke="{c["grid"]}"/>')
+    out.append(f'<text x="{left}" y="{axis + 20}" fill="{c["muted"]}" font-size="12">0 s</text>')
+    out.append("</svg>")
+    return "\n".join(out) + "\n"
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("results")
+    parser.add_argument("--svg", type=Path, help="directory for bench-light.svg and bench-dark.svg")
+    parser.add_argument("--pack", default="faithful-32x", help="pack of the chart")
+    args = parser.parse_args()
+    runs = load(args.results)
+    print(table(runs))
+    if args.svg:
+        r = runs[args.pack]
+        bars = [
+            ("PackSquash", r["packsquash-lossless"][1], False),
+            ("packprune", r["packprune-lossless"][1], True),
+            ("packprune, cached", r["packprune-lossless-cached"][1], True),
+        ]
+        for theme in THEMES:
+            (args.svg / f"bench-{theme}.svg").write_text(chart(bars, theme))
+
+
+if __name__ == "__main__":
+    main()
