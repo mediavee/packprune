@@ -81,10 +81,11 @@ jobs:
       - if: ${{ always() }}
         run: chown -R "$(stat -c %u:%g "$RUNNER_TEMP")" "$GITHUB_WORKSPACE"
 
-  # The only required check: branch rules name it, so jobs can change freely. The main-only jobs count
-  # when they ran; on a pull request they are skipped by design.
+  # The only required check: branch rules name it, so jobs can change freely. always(), not
+  # !cancelled(): a skipped required job reports success, so a cancelled run would pass. The main-only
+  # jobs count when they ran; on a pull request they are skipped by design.
   ci-ok:
-    if: ${{ !cancelled() }}
+    if: always()
     needs: [gate, fuzz-smoke, determinism]
     runs-on: ubuntu-latest
     timeout-minutes: 2
