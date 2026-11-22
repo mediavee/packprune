@@ -97,7 +97,7 @@ pub enum ZipError {
 
 /// Reads every entry through the central directory, within `limits`.
 pub fn read(path: &Utf8Path, limits: &Limits) -> Result<BTreeMap<String, Vec<u8>>, ZipError> {
-    reader::read(path, limits, &|_| true)
+    reader::read(path, limits, &|_| true, true)
 }
 
 /// [`read`], inflating only the entries `select` takes: every entry is still checked against `limits`.
@@ -106,7 +106,17 @@ pub fn read_selected(
     limits: &Limits,
     select: &dyn Fn(&str) -> bool,
 ) -> Result<BTreeMap<String, Vec<u8>>, ZipError> {
-    reader::read(path, limits, select)
+    reader::read(path, limits, select, true)
+}
+
+/// [`read_selected`] for an archive whose unselected entries were already validated: checks every central-directory
+/// header against `limits`, and inflates only entries matching `select`.
+pub fn read_selected_fast(
+    path: &Utf8Path,
+    limits: &Limits,
+    select: &dyn Fn(&str) -> bool,
+) -> Result<BTreeMap<String, Vec<u8>>, ZipError> {
+    reader::read(path, limits, select, false)
 }
 
 pub fn encode(bytes: &[u8], class: EntryClass, options: &CompressOptions) -> Encoded {

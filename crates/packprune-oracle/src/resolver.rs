@@ -829,6 +829,10 @@ impl<'r> Resolver<'r> {
                 let kind = id::source_type(self.interner(), node);
                 let mut out = Desc::object();
                 for (key, value) in sorted(members) {
+                    // `CuboidItemModelWrapper$Unbaked.MAP_CODEC`: `tints` defaults to `List.of()`.
+                    if kind == "model" && key == "tints" && value.is_array() && value.size() == 0 {
+                        continue;
+                    }
                     let resolved = match (kind.as_str(), key, value.as_str()) {
                         ("model", "model", Some(model)) | ("special", "base", Some(model)) => {
                             self.model_ref(model, Atlas::Items, Lock::default())
@@ -1132,16 +1136,17 @@ impl<'r> Resolver<'r> {
                 continue;
             }
             let mut resolved = Desc::object();
+            let rotation = match element.get("rotation") {
+                Some(rotation) if is_exact_identity_rotation(rotation, &from, &to, lock) => {
+                    Desc::Null
+                }
+                Some(rotation) => canonical_rotation(rotation),
+                None => Desc::Null,
+            };
             resolved
                 .set("from", float_array(&from))
                 .set("to", float_array(&to))
-                .set(
-                    "rotation",
-                    match element.get("rotation") {
-                        Some(rotation) => canonical_with(rotation, &str::to_lowercase),
-                        None => Desc::Null,
-                    },
-                )
+                .set("rotation", rotation)
                 .set("shade", Desc::Bool(element.path("shade").as_bool(true)))
                 .set(
                     "light_emission",
@@ -1642,6 +1647,8 @@ impl<'r> Resolver<'r> {
         let cell_width = image.width / rows[0].len() as i32;
         let cell_height = image.height / rows.len() as i32;
         let pixel_scale = height as f32 / cell_height as f32;
+        let top = 7.0f32 - ascent as f32;
+        let custom_text_shader = self.has_custom_text_shader();
         for (row, codepoints) in rows.iter().enumerate() {
             for (column, &codepoint) in codepoints.iter().enumerate() {
                 if codepoint == 0 {
@@ -1650,21 +1657,45 @@ impl<'r> Resolver<'r> {
                 let (x, y) = (column as i32 * cell_width, row as i32 * cell_height);
                 let actual = actual_width(image, x, y, cell_width, cell_height);
                 let mut glyph = Desc::object();
-                let cell = self
-                    .ctx
-                    .shared
-                    .block(digest, image, x, y, cell_width, cell_height);
                 let advance =
                     ((0.5 + f64::from(actual as f32 * pixel_scale)) as i32).wrapping_add(1);
-                glyph
-                    .set("cell", Desc::str(&*cell))
-                    .set("height", Desc::Int(height.into()))
-                    .set("ascent", Desc::Int(ascent.into()))
-                    .set("advance", Desc::Int(advance.into()));
+                if custom_text_shader {
+                    let cell = self
+                        .ctx
+                        .shared
+                        .block(digest, image, x, y, cell_width, cell_height);
+                    glyph
+                        .set("cell", Desc::str(&*cell))
+                        .set("height", Desc::Int(height.into()))
+                        .set("ascent", Desc::Int(ascent.into()))
+                        .set("advance", Desc::Int(advance.into()));
+                } else {
+                    let geom = glyph_geometry_digest(
+                        image,
+                        x,
+                        y,
+                        cell_width,
+                        cell_height,
+                        pixel_scale,
+                        top,
+                    );
+                    glyph
+                        .set("geometry", Desc::str(geom))
+                        .set("advance", Desc::Int(advance.into()));
+                }
                 glyphs.insert(codepoint, glyph);
             }
         }
         glyphs
+    }
+
+    /// True if this view replaces any `rendertype_text*` core shader, in which case font sheets are compared strictly
+    /// by raw cell dimensions and pixels.
+    fn has_custom_text_shader(&self) -> bool {
+        self.view().files.keys().any(|logical| {
+            let s = logical.as_str();
+            s.contains("/shaders/core/rendertype_text")
+        })
     }
 
     fn opaque_provider(&self, provider: &Node) -> Desc {
@@ -2248,4 +2279,140 @@ fn float_array(values: &[f32]) -> Desc {
             .map(|&value| Desc::Double(f64::from(value)))
             .collect(),
     )
+}
+
+/// True when an element's `rotation` object has angle 0, no `rescale`, a valid axis and 3-component origin, no
+/// blockstate rotation (`lock == Lock::default()`), and exact f32 `(v/16 - o/16) + o/16 == v/16` roundtrip on every
+/// corner of `(from, to)` (matching `FaceBakery.bakeVertex`).
+/// Canonicalizes an element `rotation` object per 26.2 `CuboidModelElement$Deserializer.getRotation`:
+/// - `rescale` defaults to `false`.
+/// - For Euler rotations (`!has("axis") && !has("angle")` and at least one of `x`, `y`, `z`), omitted axes default
+///   to `0.0f` (`GsonHelper.getAsFloat(obj, axis, 0.0f)`).
+fn canonical_rotation(rotation: &Node) -> Desc {
+    let mut desc = canonical_with(rotation, &str::to_lowercase);
+    if !rotation.is_object() {
+        return desc;
+    }
+    if rotation.get("rescale").is_some_and(|n| !n.as_bool(true)) {
+        desc.remove("rescale");
+    }
+    let single_axis = rotation.has("axis") || rotation.has("angle");
+    let has_euler = rotation.has("x") || rotation.has("y") || rotation.has("z");
+    if !single_axis && has_euler {
+        let mut non_zero = false;
+        for axis in ["x", "y", "z"] {
+            if let Some(val) = rotation.get(axis).and_then(Node::double_value) {
+                if (val as f32) == 0.0 {
+                    desc.remove(axis);
+                } else {
+                    non_zero = true;
+                }
+            }
+        }
+        // Keep a marker if all Euler axes were 0.0 (meaning vertex rounding prevented dropping the whole rotation).
+        if !non_zero {
+            desc.set("x", Desc::Double(0.0));
+        }
+    }
+    desc
+}
+
+fn is_exact_identity_rotation(rotation: &Node, from: &[f32], to: &[f32], lock: Lock) -> bool {
+    if lock != Lock::default() || !rotation.is_object() {
+        return false;
+    }
+    if rotation.path("rescale").as_bool(false) {
+        return false;
+    }
+    let single_axis = rotation.has("axis") || rotation.has("angle");
+    if single_axis {
+        let Some(angle) = rotation.get("angle").and_then(Node::double_value) else {
+            return false;
+        };
+        if (angle as f32) != 0.0 {
+            return false;
+        }
+        let Some(axis) = rotation.get("axis").and_then(Node::as_str) else {
+            return false;
+        };
+        if !matches!(axis.to_ascii_lowercase().as_str(), "x" | "y" | "z") {
+            return false;
+        }
+    } else {
+        // 26.2 `EulerXYZRotation`: valid when at least one of `x`, `y`, `z` is present and all present are 0.0f.
+        let mut any_axis = false;
+        for axis in ["x", "y", "z"] {
+            if let Some(node) = rotation.get(axis) {
+                let Some(v) = node.double_value() else {
+                    return false;
+                };
+                if (v as f32) != 0.0 {
+                    return false;
+                }
+                any_axis = true;
+            }
+        }
+        if !any_axis {
+            return false;
+        }
+    }
+    let origin = rotation.path("origin");
+    if !origin.is_array() || origin.size() != 3 {
+        return false;
+    }
+    for i in 0..3 {
+        let Some(o_raw) = origin.item(i).and_then(Node::double_value) else {
+            return false;
+        };
+        let o = (o_raw as f32) / 16.0;
+        for &v_raw in &[from[i], to[i]] {
+            let v = v_raw / 16.0;
+            if (v - o) + o != v {
+                return false;
+            }
+        }
+    }
+    true
+}
+
+/// Geometry-based canonical digest of a bitmap font glyph cell: hashes every non-zero RGBA pixel along with its
+/// exact f32 GUI screen-space rectangle `(x0, y0, x1, y1)`. Completely transparent all-zero `[0,0,0,0]` margins are
+/// omitted so lossless top/bottom/right trimming (with exact-scale `height`/`ascent` adjustment) proves equivalent,
+/// while transparent pixels with non-zero RGB still affect the digest.
+fn glyph_geometry_digest(
+    image: &Image,
+    x0: i32,
+    y0: i32,
+    cell_width: i32,
+    cell_height: i32,
+    scale: f32,
+    top: f32,
+) -> String {
+    let mut buf = Vec::new();
+    for py in 0..cell_height {
+        let iy = y0 + py;
+        if iy < 0 || iy >= image.height {
+            continue;
+        }
+        let gy0 = (top + py as f32 * scale).to_bits().to_le_bytes();
+        let gy1 = (top + (py + 1) as f32 * scale).to_bits().to_le_bytes();
+        let row_base = (iy * image.width) as usize;
+        for px in 0..cell_width {
+            let ix = x0 + px;
+            if ix < 0 || ix >= image.width {
+                continue;
+            }
+            let at = (row_base + ix as usize) * 4;
+            let rgba = &image.rgba[at..at + 4];
+            if rgba == [0, 0, 0, 0] {
+                continue;
+            }
+            buf.extend_from_slice(&(px as f32 * scale).to_bits().to_le_bytes());
+            buf.extend_from_slice(&gy0);
+            buf.extend_from_slice(&((px + 1) as f32 * scale).to_bits().to_le_bytes());
+            buf.extend_from_slice(&gy1);
+            buf.extend_from_slice(rgba);
+        }
+    }
+    canon::encode(&canon::digest_bytes(&buf))
 }

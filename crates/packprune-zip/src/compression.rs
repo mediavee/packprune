@@ -1,6 +1,15 @@
+use std::cell::RefCell;
 use std::num::NonZeroU64;
 
 use crate::{CompressOptions, EntryClass};
+
+/// Stop Zopfli early once 4 consecutive iterations fail to shrink the stream further.
+const ZOPFLI_STALL_LIMIT: NonZeroU64 = NonZeroU64::new(4).expect("non-zero");
+
+thread_local! {
+    static LIBDEFLATE: RefCell<libdeflater::Compressor> =
+        RefCell::new(libdeflater::Compressor::new(libdeflater::CompressionLvl::best()));
+}
 
 pub(crate) fn compress(
     bytes: &[u8],
@@ -24,13 +33,15 @@ pub(crate) fn compress(
 }
 
 pub(crate) fn libdeflate(bytes: &[u8]) -> Vec<u8> {
-    let mut compressor = libdeflater::Compressor::new(libdeflater::CompressionLvl::best());
-    let mut compressed = vec![0; compressor.deflate_compress_bound(bytes.len())];
-    let size = compressor
-        .deflate_compress(bytes, &mut compressed)
-        .expect("libdeflate output fits its compression bound");
-    compressed.truncate(size);
-    compressed
+    LIBDEFLATE.with(|cell| {
+        let mut compressor = cell.borrow_mut();
+        let mut compressed = vec![0; compressor.deflate_compress_bound(bytes.len())];
+        let size = compressor
+            .deflate_compress(bytes, &mut compressed)
+            .expect("libdeflate output fits its compression bound");
+        compressed.truncate(size);
+        compressed
+    })
 }
 
 /// Iterations × size: 15 iterations, zopfli's own default, up to 1 MiB, fewer beyond, none past 16 MiB, where
@@ -41,6 +52,7 @@ pub(crate) fn zopfli(bytes: &[u8]) -> Option<Vec<u8>> {
     let iterations = (ZOPFLI_BUDGET / bytes.len().max(1) as u64).min(15);
     let options = zopfli::Options {
         iteration_count: NonZeroU64::new(iterations)?,
+        iterations_without_improvement: ZOPFLI_STALL_LIMIT,
         ..zopfli::Options::default()
     };
     let mut compressed = Vec::new();

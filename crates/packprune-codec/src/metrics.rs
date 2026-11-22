@@ -38,76 +38,107 @@ pub fn image_loss(
     }
     let width = width as usize;
     let height = height as usize;
+    let w = width.min(7);
+    let h = height.min(7);
+    let out_w = width - w + 1;
+    let inv_n = 1.0 / (w * h) as f64;
+    let windows = (out_w * (height - h + 1)) as f64;
+    let c1 = (0.01f64 * 255.0).powi(2);
+    let c2 = (0.03f64 * 255.0).powi(2);
+
+    // Precompute nearest-neighbor X source indices once for both images.
+    let map_axis = |src_len: u32, dst_len: usize| -> Vec<usize> {
+        let src_f = f64::from(src_len);
+        let dst_f = dst_len as f64;
+        let max_idx = src_len as usize - 1;
+        (0..dst_len)
+            .map(|i| (((i as f64 + 0.5) * src_f / dst_f) as usize).min(max_idx))
+            .collect()
+    };
+    let sx_a = map_axis(before.width, width);
+    let sy_a = map_axis(before.height, height);
+    let sx_b = map_axis(after.width, width);
+    let sy_b = map_axis(after.height, height);
+
     let mut ssim = 0.0;
     let mut max_delta = 0.0f64;
+    // Rolling ring buffer of `h` rows of 5 horizontal 7-wide sums: [sum_a, sum_b, sum_a2, sum_b2, sum_ab].
+    // Uses ~1 MiB even for 4096x4096 (vs 256 MiB for full-plane f64 buffers) and O(w+h) per pixel (~50x faster).
+    let mut ring = vec![[0.0f64; 5]; h * out_w];
+    let mut row_a = vec![0.0f64; width];
+    let mut row_b = vec![0.0f64; width];
+    let bw = before.width as usize;
+    let aw = after.width as usize;
+
     for channel in 0..4 {
-        let sample = |image: &Image| {
-            let mut out = Vec::with_capacity(width * height);
-            for y in 0..height {
-                let sy = (((y as f64 + 0.5) * f64::from(image.height) / height as f64) as usize)
-                    .min(image.height as usize - 1);
+        let mut total = 0.0;
+        for y in 0..height {
+            let base_a = sy_a[y] * bw;
+            let base_b = sy_b[y] * aw;
+            if channel == 3 {
                 for x in 0..width {
-                    let sx = (((x as f64 + 0.5) * f64::from(image.width) / width as f64) as usize)
-                        .min(image.width as usize - 1);
-                    let p = &image.rgba[(sy * image.width as usize + sx) * 4..];
-                    out.push(if channel == 3 {
-                        f64::from(p[3])
-                    } else {
-                        f64::from(p[channel]) * f64::from(p[3]) / 255.0
-                    });
+                    let va = f64::from(before.rgba[(base_a + sx_a[x]) * 4 + 3]);
+                    let vb = f64::from(after.rgba[(base_b + sx_b[x]) * 4 + 3]);
+                    row_a[x] = va;
+                    row_b[x] = vb;
+                    max_delta = max_delta.max((va - vb).abs());
+                }
+            } else {
+                for x in 0..width {
+                    let pa = &before.rgba[(base_a + sx_a[x]) * 4..];
+                    let pb = &after.rgba[(base_b + sx_b[x]) * 4..];
+                    let va = f64::from(pa[channel]) * f64::from(pa[3]) / 255.0;
+                    let vb = f64::from(pb[channel]) * f64::from(pb[3]) / 255.0;
+                    row_a[x] = va;
+                    row_b[x] = vb;
+                    max_delta = max_delta.max((va - vb).abs());
                 }
             }
-            out
-        };
-        let a = sample(before);
-        let b = sample(after);
-        for (&x, &y) in a.iter().zip(&b) {
-            max_delta = max_delta.max((x - y).abs());
+            let slot = (y % h) * out_w;
+            for x in 0..out_w {
+                let (mut sa, mut sb, mut sa2, mut sb2, mut sab) = (0.0, 0.0, 0.0, 0.0, 0.0);
+                for i in 0..w {
+                    let va = row_a[x + i];
+                    let vb = row_b[x + i];
+                    sa += va;
+                    sb += vb;
+                    sa2 += va * va;
+                    sb2 += vb * vb;
+                    sab += va * vb;
+                }
+                ring[slot + x] = [sa, sb, sa2, sb2, sab];
+            }
+            if y + 1 >= h {
+                for x in 0..out_w {
+                    let (mut sa, mut sb, mut sa2, mut sb2, mut sab) = (0.0, 0.0, 0.0, 0.0, 0.0);
+                    for j in 0..h {
+                        let r = ring[j * out_w + x];
+                        sa += r[0];
+                        sb += r[1];
+                        sa2 += r[2];
+                        sb2 += r[3];
+                        sab += r[4];
+                    }
+                    let mean_a = sa * inv_n;
+                    let mean_b = sb * inv_n;
+                    let var_a = (sa2 * inv_n - mean_a * mean_a).max(0.0);
+                    let var_b = (sb2 * inv_n - mean_b * mean_b).max(0.0);
+                    let cov = if var_a == 0.0 || var_b == 0.0 {
+                        0.0
+                    } else {
+                        sab * inv_n - mean_a * mean_b
+                    };
+                    total += (2.0 * mean_a * mean_b + c1) * (2.0 * cov + c2)
+                        / ((mean_a * mean_a + mean_b * mean_b + c1) * (var_a + var_b + c2));
+                }
+            }
         }
-        ssim += channel_ssim(&a, &b, width, height) / 4.0;
+        ssim += (total / windows) / 4.0;
     }
     Ok(ImageLoss {
         ssim,
         max_delta: max_delta.round() as u8,
     })
-}
-
-fn channel_ssim(a: &[f64], b: &[f64], width: usize, height: usize) -> f64 {
-    let w = width.min(7);
-    let h = height.min(7);
-    let n = (w * h) as f64;
-    let mut total = 0.0;
-    let mut windows = 0;
-    let c1 = (0.01f64 * 255.0).powi(2);
-    let c2 = (0.03f64 * 255.0).powi(2);
-    for y in 0..=height - h {
-        for x in 0..=width - w {
-            let mut mean_a = 0.0;
-            let mut mean_b = 0.0;
-            for j in 0..h {
-                for i in 0..w {
-                    mean_a += a[(y + j) * width + x + i] / n;
-                    mean_b += b[(y + j) * width + x + i] / n;
-                }
-            }
-            let mut var_a = 0.0;
-            let mut var_b = 0.0;
-            let mut cov = 0.0;
-            for j in 0..h {
-                for i in 0..w {
-                    let da = a[(y + j) * width + x + i] - mean_a;
-                    let db = b[(y + j) * width + x + i] - mean_b;
-                    var_a += da * da / n;
-                    var_b += db * db / n;
-                    cov += da * db / n;
-                }
-            }
-            total += (2.0 * mean_a * mean_b + c1) * (2.0 * cov + c2)
-                / ((mean_a * mean_a + mean_b * mean_b + c1) * (var_a + var_b + c2));
-            windows += 1;
-        }
-    }
-    total / f64::from(windows)
 }
 
 pub fn sound_loss(before: &Pcm, after: &Pcm) -> Result<SoundLoss, CodecError> {

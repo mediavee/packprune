@@ -254,14 +254,17 @@ fn run_section<C: Figures>(run: &RunReport<C>, passes: Option<&Passes>) -> Strin
     if let Some(cost) = &run.cost {
         md.push_str("\n## Client memory\n\n");
         md.push_str("In the view of the client jar's format; a total is a floor while its model is incomplete.\n\n");
-        md.push_str("| | Atlas GPU (MiB) | Fonts (MiB) | Model |\n|---|---:|---:|---|\n");
+        md.push_str("| | Atlas GPU (MiB) | Aniso 16x GPU (MiB) | Animations GPU (MiB) | Fonts (MiB) | Sounds PCM (MiB) | Model |\n|---|---:|---:|---:|---:|---:|---|\n");
         for (label, cost) in [("Input", &cost.input), ("Output", &cost.output)] {
             if let Some(cost) = cost {
                 let _ = writeln!(
                     md,
-                    "| {label} | {:.1} | {:.1} | {} |",
+                    "| {label} | {:.1} | {:.1} | {:.1} | {:.1} | {:.1} | {} |",
                     cost.atlas_gpu_bytes() as f64 / MIB,
+                    cost.atlas_aniso_gpu_bytes() as f64 / MIB,
+                    cost.animation_gpu_bytes() as f64 / MIB,
                     cost.font_bytes() as f64 / MIB,
+                    cost.sound_pcm_bytes() as f64 / MIB,
                     completeness(cost)
                 );
             }

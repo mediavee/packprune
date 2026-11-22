@@ -924,3 +924,70 @@ fn an_overlay_replaces_the_font_definition_of_the_root_it_does_not_add_to_it() {
         "only the overlay's"
     );
 }
+
+fn minimal_vorbis_ogg(channels: u8, samples: i64) -> Vec<u8> {
+    // Minimal two-page OggS container: page 0 carries `\x01vorbis` identification header,
+    // page 1 carries the final granule position (sample count).
+    let mut page0_body = vec![0u8; 30];
+    page0_body[..7].copy_from_slice(b"\x01vorbis");
+    page0_body[11] = channels;
+    let mut out = Vec::new();
+    let push_page = |buf: &mut Vec<u8>, granule: i64, body: &[u8]| {
+        buf.extend_from_slice(b"OggS");
+        buf.push(0); // version
+        buf.push(0); // header_type
+        buf.extend_from_slice(&granule.to_le_bytes());
+        buf.extend_from_slice(&0u32.to_le_bytes()); // serial
+        buf.extend_from_slice(&0u32.to_le_bytes()); // seq
+        buf.extend_from_slice(&0u32.to_le_bytes()); // crc
+        buf.push(1); // segments
+        buf.push(body.len() as u8);
+        buf.extend_from_slice(body);
+    };
+    push_page(&mut out, 0, &page0_body);
+    push_page(&mut out, samples, &[0u8; 4]);
+    out
+}
+
+#[test]
+fn sound_cost_counts_openal_pcm_for_buffered_sounds_and_excludes_streamed() {
+    let mut fixture = Fixture::new();
+    fixture
+        .pack
+        .insert("assets/fx/sounds/a.ogg".into(), minimal_vorbis_ogg(2, 1000));
+    fixture
+        .pack
+        .insert("assets/fx/sounds/b.ogg".into(), minimal_vorbis_ogg(1, 5000));
+    fixture.pack_file(
+        "assets/fx/sounds.json",
+        r#"{"ev1":{"sounds":["fx:a",{"name":"fx:b","stream":true}]}}"#,
+    );
+    let cost = fixture.cost();
+    assert_eq!(cost.sounds.buffered, 1);
+    assert_eq!(cost.sounds.streamed, 1);
+    // 2 channels * 1000 samples * 2 bytes/sample = 4000 bytes; streamed sound `b` is not resident in OpenAL RAM.
+    assert_eq!(cost.sounds.pcm_bytes, 4000);
+    assert_eq!(cost.sounds_pcm_bytes(), 4000);
+}
+
+#[test]
+fn atlas_cost_tracks_anisotropic_worst_case_and_animation_frame_gpu() {
+    let mut fixture = Fixture::new();
+    fixture
+        .pack_png("assets/minecraft/textures/block/anim.png", 16, 64)
+        .pack_file(
+            "assets/minecraft/textures/block/anim.png.mcmeta",
+            r#"{"animation":{"frametime":2}}"#,
+        );
+    let cost = fixture.cost();
+    let blocks = cost.atlas("minecraft:blocks");
+    assert!(
+        blocks.aniso_gpu >= blocks.gpu,
+        "anisotropic padding cannot shrink the atlas"
+    );
+    assert!(
+        blocks.animation_gpu > 0,
+        "animated 4-frame sprite allocates per-frame GPU textures"
+    );
+    assert_eq!(blocks.reload_peak_gpu, blocks.gpu + blocks.decoded);
+}

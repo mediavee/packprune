@@ -312,6 +312,10 @@ pub fn encode(pcm: &Pcm, quality: f32) -> Result<Vec<u8>, CodecError> {
 
 pub fn optimise(bytes: &[u8]) -> Result<Vec<u8>, CodecError> {
     let before = decode(bytes)?;
+    optimise_decoded(bytes, &before)
+}
+
+fn optimise_decoded(bytes: &[u8], before: &Pcm) -> Result<Vec<u8>, CodecError> {
     // JOrbis reads coupled channel indices with floor(log2(channels)); keep multichannel inputs.
     if before.channels.len() > 2 {
         return Ok(bytes.to_vec());
@@ -332,7 +336,7 @@ pub fn optimise(bytes: &[u8]) -> Result<Vec<u8>, CodecError> {
         .remux(Cursor::new(bytes), Vec::new())
         .map_err(|e| invalid("Ogg", e))?;
     let plays_alike = |candidate: &[u8]| {
-        candidate.len() < bytes.len() && decode(candidate).is_ok_and(|after| after == before)
+        candidate.len() < bytes.len() && decode(candidate).is_ok_and(|after| after == *before)
     };
     // OptiVorbis's own pages are the fewest. `decode` follows JOrbis's page granules, so the same PCM means the
     // client plays them alike; otherwise the input's page groups keep its timing.
@@ -349,16 +353,43 @@ pub fn optimise(bytes: &[u8]) -> Result<Vec<u8>, CodecError> {
 
 pub fn optimise_empty(bytes: &[u8]) -> Result<Vec<u8>, CodecError> {
     let pcm = decode(bytes)?;
+    optimise_empty_decoded(bytes, &pcm)
+}
+
+fn optimise_empty_decoded(bytes: &[u8], pcm: &Pcm) -> Result<Vec<u8>, CodecError> {
     if pcm.channels.iter().flatten().any(|&s| s != 0.0) {
         return Ok(bytes.to_vec());
     }
     // Preserve the sample count and rate: silence has a duration too.
-    let candidate = optimise(&encode(&pcm, -0.2)?)?;
-    if candidate.len() < bytes.len() && decode(&candidate)? == pcm {
+    let candidate = optimise(&encode(pcm, -0.2)?)?;
+    if candidate.len() < bytes.len() && decode(&candidate)? == *pcm {
         Ok(candidate)
     } else {
         Ok(bytes.to_vec())
     }
+}
+
+/// Decodes `bytes` once, running silent-stream replacement when `empty_audio` is set and OptiVorbis remuxing
+/// when `optimize_ogg` is set.
+pub fn optimise_with_options(
+    bytes: &[u8],
+    empty_audio: bool,
+    optimize_ogg: bool,
+) -> Result<Vec<u8>, CodecError> {
+    if !empty_audio && !optimize_ogg {
+        return Ok(bytes.to_vec());
+    }
+    let pcm = decode(bytes)?;
+    if empty_audio {
+        let silent = optimise_empty_decoded(bytes, &pcm)?;
+        if silent.len() < bytes.len() {
+            return Ok(silent);
+        }
+    }
+    if optimize_ogg {
+        return optimise_decoded(bytes, &pcm);
+    }
+    Ok(bytes.to_vec())
 }
 
 pub fn downmix(pcm: &Pcm) -> Result<Pcm, CodecError> {

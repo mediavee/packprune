@@ -752,6 +752,7 @@ dependencies = [
 name = "packprune-codec"
 version = "2.0.0"
 dependencies = [
+ "crc32fast",
  "flate2",
  "imagequant",
  "ogg",
@@ -897,6 +898,7 @@ dependencies = [
  "packprune-codec",
  "packprune-graph",
  "packprune-pack",
+ "rayon",
  "serde",
  "serde_json",
  "sha1",

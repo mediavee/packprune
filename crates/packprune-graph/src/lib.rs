@@ -17,6 +17,7 @@ mod facts;
 mod glsl;
 mod index;
 mod json;
+pub mod stitch;
 mod token_memo;
 mod tokens;
 mod unused;

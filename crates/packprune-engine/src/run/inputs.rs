@@ -96,7 +96,8 @@ impl JarAssets {
     /// The jar read, before the first comparison: a jar that cannot be read fails the run, never the comparison.
     pub(crate) fn load(&self) -> Result<&Self, RunError> {
         if self.files.get().is_none() {
-            let files = packprune_zip::read_selected(&self.jar, &self.limits, &|name| {
+            // `VanillaIndex` already validated this jar under `self.limits`; skip inflating class files.
+            let files = packprune_zip::read_selected_fast(&self.jar, &self.limits, &|name| {
                 name.starts_with("assets/")
             })
             .map_err(|error| RunError::Refused(format!("{}: {error}", self.jar)))?;

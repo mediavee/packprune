@@ -1,16 +1,29 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs::File;
-use std::io::{self, Cursor, Read};
+use std::io::{Cursor, Read};
 
 use camino::Utf8Path;
+use flate2::read::DeflateDecoder;
+use rayon::prelude::*;
 use zip::{CompressionMethod, ZipArchive};
 
 use crate::{Limits, ZipError, refuse, validate_path};
+
+struct Job {
+    name: String,
+    header_start: u64,
+    compressed_size: u64,
+    size: u64,
+    crc: u32,
+    deflated: bool,
+    keep: bool,
+}
 
 pub(crate) fn read(
     path: &Utf8Path,
     limits: &Limits,
     select: &dyn Fn(&str) -> bool,
+    verify_unselected: bool,
 ) -> Result<BTreeMap<String, Vec<u8>>, ZipError> {
     let file = File::open(path)?;
     if file.metadata()?.len() == 0 {
@@ -18,10 +31,11 @@ pub(crate) fn read(
     }
     // SAFETY: the mapping is read-only and stays alive until every entry has been copied out.
     let mapped = unsafe { memmap2::Mmap::map(&file)? };
-    let mut archive = ZipArchive::new(Cursor::new(&mapped[..]))
+    let archive = ZipArchive::new(Cursor::new(&mapped[..]))
         .map_err(|error| refuse(path.as_str(), error.to_string()))?;
     let mut records = check_directory(&mapped, archive.central_directory_start(), limits)?;
     let mut total = 0_u64;
+    let mut jobs: Vec<Job> = Vec::with_capacity(archive.len());
     for index in 0..archive.len() {
         let entry = archive
             .by_index_data(index)
@@ -38,12 +52,11 @@ pub(crate) fn read(
         if entry.encrypted() || entry.flags().as_u16() & 0x40 != 0 {
             return Err(refuse(name, "encrypted entry"));
         }
-        if !matches!(
-            entry.compression(),
-            CompressionMethod::Stored | CompressionMethod::Deflated
-        ) {
-            return Err(refuse(name, "unsupported compression method"));
-        }
+        let deflated = match entry.compression() {
+            CompressionMethod::Stored => false,
+            CompressionMethod::Deflated => true,
+            _ => return Err(refuse(name, "unsupported compression method")),
+        };
         if entry.size() > limits.max_entry_bytes {
             return Err(refuse(name, "entry size limit exceeded"));
         }
@@ -58,44 +71,144 @@ pub(crate) fn read(
         {
             return Err(refuse(name, "compression ratio limit exceeded"));
         }
+        let keep = !name.ends_with('/') && select(name);
+        if keep || verify_unselected {
+            jobs.push(Job {
+                name: name.to_owned(),
+                header_start: entry.header_start(),
+                compressed_size: entry.compressed_size(),
+                size: entry.size(),
+                crc: entry.crc32(),
+                deflated,
+                keep,
+            });
+        }
     }
 
     if let Some((_, name)) = records.first_key_value() {
         return Err(refuse(name, "central-directory entry is not indexed"));
     }
 
+    drop(archive);
+    type EntryResult = Result<Option<(String, Vec<u8>)>, ZipError>;
+    let raw: &[u8] = &mapped[..];
+    let results: Vec<EntryResult> = if jobs.len() >= 16 {
+        jobs.into_par_iter()
+            .map(|job| inflate_entry(raw, job))
+            .collect()
+    } else {
+        jobs.into_iter()
+            .map(|job| inflate_entry(raw, job))
+            .collect()
+    };
+
     let mut files = BTreeMap::new();
-    for index in 0..archive.len() {
-        let metadata = archive
-            .by_index_data(index)
-            .map_err(|error| refuse(path.as_str(), error.to_string()))?;
-        let name = std::str::from_utf8(metadata.name_raw())
-            .expect("validated UTF-8 path")
-            .to_owned();
-        let size = metadata.size();
-        let keep = !name.ends_with('/') && select(&name);
-        let mut entry = archive
-            .by_index(index)
-            .map_err(|error| refuse(&name, error.to_string()))?;
-        // Bound the read as well as the declaration, including when the CRC matches a lying size. An entry not kept is
-        // inflated all the same, through a small buffer, so its size and CRC are checked as a kept one's.
-        let mut bounded = (&mut entry).take(size.saturating_add(1));
-        let mut bytes = Vec::new();
-        let inflated = if keep {
-            bytes.reserve_exact(size as usize);
-            bounded.read_to_end(&mut bytes).map(|read| read as u64)
-        } else {
-            io::copy(&mut bounded, &mut io::sink())
-        }
-        .map_err(|error| refuse(&name, error.to_string()))?;
-        if inflated != size {
-            return Err(refuse(&name, "inflated size differs from declared size"));
-        }
-        if keep {
+    for result in results {
+        if let Some((name, bytes)) = result? {
             files.insert(name, bytes);
         }
     }
     Ok(files)
+}
+
+fn inflate_entry(raw: &[u8], job: Job) -> Result<Option<(String, Vec<u8>)>, ZipError> {
+    let header_start = usize::try_from(job.header_start)
+        .map_err(|_| refuse(&job.name, "invalid local header offset"))?;
+    let header = raw
+        .get(header_start..header_start.saturating_add(30))
+        .ok_or_else(|| refuse(&job.name, "truncated local file header"))?;
+    if &header[..4] != b"PK\x03\x04" {
+        return Err(refuse(&job.name, "invalid local file header signature"));
+    }
+    let name_len = u16::from_le_bytes([header[26], header[27]]) as usize;
+    let extra_len = u16::from_le_bytes([header[28], header[29]]) as usize;
+    let data_start = header_start
+        .checked_add(30)
+        .and_then(|v| v.checked_add(name_len))
+        .and_then(|v| v.checked_add(extra_len))
+        .ok_or_else(|| refuse(&job.name, "local header offset overflow"))?;
+    let compressed_size = usize::try_from(job.compressed_size)
+        .map_err(|_| refuse(&job.name, "compressed entry exceeds memory"))?;
+    let data_end = data_start
+        .checked_add(compressed_size)
+        .ok_or_else(|| refuse(&job.name, "entry payload offset overflow"))?;
+    let payload = raw
+        .get(data_start..data_end)
+        .ok_or_else(|| refuse(&job.name, "truncated entry payload"))?;
+
+    if !job.deflated {
+        if payload.len() as u64 != job.size {
+            return Err(refuse(
+                &job.name,
+                "inflated size differs from declared size",
+            ));
+        }
+        if crc32fast::hash(payload) != job.crc {
+            return Err(refuse(&job.name, "invalid checksum"));
+        }
+        return Ok(job.keep.then(|| (job.name, payload.to_vec())));
+    }
+
+    // Bound the read as well as the declaration, including when the CRC matches a lying size.
+    let mut decoder = DeflateDecoder::new(Cursor::new(payload));
+    if job.keep {
+        let size_usize = usize::try_from(job.size)
+            .map_err(|_| refuse(&job.name, "entry size exceeds memory"))?;
+        let mut bytes = vec![0u8; size_usize];
+        let mut filled = 0usize;
+        while filled < size_usize {
+            let n = decoder
+                .read(&mut bytes[filled..])
+                .map_err(|error| refuse(&job.name, error.to_string()))?;
+            if n == 0 {
+                return Err(refuse(
+                    &job.name,
+                    "inflated size differs from declared size",
+                ));
+            }
+            filled += n;
+        }
+        let mut extra = [0u8; 1];
+        if decoder
+            .read(&mut extra)
+            .map_err(|error| refuse(&job.name, error.to_string()))?
+            != 0
+        {
+            return Err(refuse(
+                &job.name,
+                "inflated size differs from declared size",
+            ));
+        }
+        if crc32fast::hash(&bytes) != job.crc {
+            return Err(refuse(&job.name, "invalid checksum"));
+        }
+        Ok(Some((job.name, bytes)))
+    } else {
+        let mut bounded = decoder.take(job.size.saturating_add(1));
+        let mut hasher = crc32fast::Hasher::new();
+        let mut buf = [0u8; 32 * 1024];
+        let mut inflated = 0u64;
+        loop {
+            let n = bounded
+                .read(&mut buf)
+                .map_err(|error| refuse(&job.name, error.to_string()))?;
+            if n == 0 {
+                break;
+            }
+            inflated += n as u64;
+            hasher.update(&buf[..n]);
+        }
+        if inflated != job.size {
+            return Err(refuse(
+                &job.name,
+                "inflated size differs from declared size",
+            ));
+        }
+        if hasher.finalize() != job.crc {
+            return Err(refuse(&job.name, "invalid checksum"));
+        }
+        Ok(None)
+    }
 }
 
 fn check_directory<'a>(
