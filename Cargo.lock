@@ -726,7 +726,7 @@ dependencies = [
 
 [[package]]
 name = "packprune-cache"
-version = "2.0.0"
+version = "2.1.0"
 dependencies = [
  "blake3",
  "camino",
@@ -736,7 +736,7 @@ dependencies = [
 
 [[package]]
 name = "packprune-cli"
-version = "2.0.0"
+version = "2.1.0"
 dependencies = [
  "camino",
  "clap",
@@ -750,7 +750,7 @@ dependencies = [
 
 [[package]]
 name = "packprune-codec"
-version = "2.0.0"
+version = "2.1.0"
 dependencies = [
  "crc32fast",
  "flate2",
@@ -772,7 +772,7 @@ dependencies = [
 
 [[package]]
 name = "packprune-config"
-version = "2.0.0"
+version = "2.1.0"
 dependencies = [
  "camino",
  "globset",
@@ -787,7 +787,7 @@ dependencies = [
 
 [[package]]
 name = "packprune-engine"
-version = "2.0.0"
+version = "2.1.0"
 dependencies = [
  "blake3",
  "camino",
@@ -817,7 +817,7 @@ dependencies = [
 
 [[package]]
 name = "packprune-graph"
-version = "2.0.0"
+version = "2.1.0"
 dependencies = [
  "camino",
  "packprune-pack",
@@ -829,7 +829,7 @@ dependencies = [
 
 [[package]]
 name = "packprune-oracle"
-version = "2.0.0"
+version = "2.1.0"
 dependencies = [
  "blake3",
  "packprune-codec",
@@ -841,7 +841,7 @@ dependencies = [
 
 [[package]]
 name = "packprune-pack"
-version = "2.0.0"
+version = "2.1.0"
 dependencies = [
  "blake3",
  "camino",
@@ -858,7 +858,7 @@ dependencies = [
 
 [[package]]
 name = "packprune-pass"
-version = "2.0.0"
+version = "2.1.0"
 dependencies = [
  "blake3",
  "camino",
@@ -873,7 +873,7 @@ dependencies = [
 
 [[package]]
 name = "packprune-passes"
-version = "2.0.0"
+version = "2.1.0"
 dependencies = [
  "blake3",
  "camino",
@@ -893,7 +893,7 @@ dependencies = [
 
 [[package]]
 name = "packprune-report"
-version = "2.0.0"
+version = "2.1.0"
 dependencies = [
  "packprune-codec",
  "packprune-graph",
@@ -909,7 +909,7 @@ dependencies = [
 
 [[package]]
 name = "packprune-sources"
-version = "2.0.0"
+version = "2.1.0"
 dependencies = [
  "blake3",
  "camino",
@@ -923,7 +923,7 @@ dependencies = [
 
 [[package]]
 name = "packprune-zip"
-version = "2.0.0"
+version = "2.1.0"
 dependencies = [
  "camino",
  "crc32fast",
