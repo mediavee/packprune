@@ -187,13 +187,31 @@ impl FileOptimizer for Png {
         let Ok(before) = png::decode(input) else {
             return Ok(None);
         };
+        let pixels;
         // The lossless optimisers ran first, so the input is what a candidate must beat.
-        let candidate = match self {
-            Self::Alpha => png::clear_transparent(&before)
-                .map(|image| png::encode(&image))
-                .transpose(),
-            Self::Quantize => png::quantize(&before, &options.quantization),
+        let fast = match self {
+            Self::Alpha => {
+                let Some(cleared) = png::clear_transparent(&before) else {
+                    return Ok(None);
+                };
+                pixels = cleared.width as usize * cleared.height as usize;
+                png::optimise_raw_fast(&cleared, &codec).map_err(failed)?
+            }
+            Self::Quantize => {
+                let Some(candidate) =
+                    png::quantize(&before, &options.quantization).map_err(failed)?
+                else {
+                    return Ok(None);
+                };
+                pixels = before.width as usize * before.height as usize;
+                png::optimise_fast(&candidate, &codec).map_err(failed)?.0
+            }
             Self::SingleColor => {
+                // B1 guard: colormaps (256-wide LUTs), font sheets (cell size sets glyph advance & height), and
+                // palette textures (pixel count must match palette_key) must never be resized.
+                if is_dimension_sensitive_texture(&cx.path) {
+                    return Ok(None);
+                }
                 let side = uniform_side(before.width, before.height);
                 let uniform = side < before.width.min(before.height)
                     && before
@@ -202,22 +220,27 @@ impl FileOptimizer for Png {
                         .0
                         .iter()
                         .all(|p| p == &before.rgba[..4]);
-                uniform
-                    .then(|| {
-                        png::encode(&png::Image {
-                            width: side,
-                            height: side,
-                            rgba: before.rgba[..4].repeat((side * side) as usize),
-                        })
-                    })
-                    .transpose()
+                let resized = if uniform {
+                    png::Image {
+                        width: side,
+                        height: side,
+                        rgba: before.rgba[..4].repeat((side * side) as usize),
+                    }
+                } else if let Some(downscaled) = exact_block_downscale(&before, side) {
+                    downscaled
+                } else {
+                    return Ok(None);
+                };
+                pixels = resized.width as usize * resized.height as usize;
+                png::optimise_raw_fast(&resized, &codec).map_err(failed)?
             }
-        }
-        .map_err(failed)?;
-        let Some(candidate) = candidate else {
-            return Ok(None);
         };
-        let bytes = png::optimise(&candidate, &codec).map_err(failed)?;
+        // Fast reject: if libdeflate-12 isn't even within 5% of the input, Zopfli (which typically saves ~0.5-1.5%
+        // over libdeflate-12) cannot beat the input either, so skip the expensive Zopfli pass.
+        if options.effort > 0 && fast.len() * 95 >= input.len() * 100 {
+            return Ok(None);
+        }
+        let bytes = png::zopfli_idat(&fast, pixels, options.effort).map_err(failed)?;
         if bytes.len() >= input.len() {
             return Ok(None);
         }
@@ -260,6 +283,91 @@ impl FileOptimizer for Png {
             loss: record,
         }))
     }
+}
+
+/// Textures whose pixel dimensions carry semantic meaning in the client: colormaps (256-wide LUTs), font sheets
+/// (cell height/width set glyph size and advance), and palette strips (pixel count must equal palette_key).
+fn is_dimension_sensitive_texture(path: &PhysPath) -> bool {
+    let Some(logical) = crate::encode::logical(path) else {
+        return false;
+    };
+    let Some((_, rest)) = logical
+        .strip_prefix("assets/")
+        .and_then(|s| s.split_once('/'))
+    else {
+        return false;
+    };
+    rest.starts_with("textures/colormap/")
+        || rest.starts_with("textures/font/")
+        || rest.starts_with("textures/palettes/")
+        || rest.starts_with("textures/trims/color_palettes/")
+}
+
+/// Detects if `image` is an exact `k x k` nearest-neighbor integer upscale (every `k x k` block is bit-for-bit
+/// identical) and returns the largest mip-safe downscale (`new_w.isolate_lowest_one() >= min_align` and
+/// `new_h.isolate_lowest_one() >= min_align`). Gives 4x-64x GPU VRAM savings with SSIM = 1.0 and max_delta = 0.
+fn exact_block_downscale(image: &png::Image, min_align: u32) -> Option<png::Image> {
+    let min_side = image.width.min(image.height);
+    if min_side < min_align.saturating_mul(2) {
+        return None;
+    }
+    let max_k = min_side / min_align.max(1);
+    let mut best_k = 1u32;
+    let mut k = 2u32;
+    while k <= max_k {
+        if image.width.is_multiple_of(k)
+            && image.height.is_multiple_of(k)
+            && (image.width / k).isolate_lowest_one() >= min_align
+            && (image.height / k).isolate_lowest_one() >= min_align
+            && is_exact_k_upscale(image, k)
+        {
+            best_k = k;
+        }
+        k = k.saturating_mul(2);
+    }
+    if best_k < 2 {
+        return None;
+    }
+    let new_w = image.width / best_k;
+    let new_h = image.height / best_k;
+    let mut rgba = Vec::with_capacity(new_w as usize * new_h as usize * 4);
+    for y in 0..new_h {
+        let sy = (y * best_k) as usize * image.width as usize;
+        for x in 0..new_w {
+            let at = (sy + (x * best_k) as usize) * 4;
+            rgba.extend_from_slice(&image.rgba[at..at + 4]);
+        }
+    }
+    Some(png::Image {
+        width: new_w,
+        height: new_h,
+        rgba,
+    })
+}
+
+fn is_exact_k_upscale(image: &png::Image, k: u32) -> bool {
+    let w = image.width as usize;
+    let ku = k as usize;
+    let blocks_x = w / ku;
+    let blocks_y = image.height as usize / ku;
+    for by in 0..blocks_y {
+        let base_y = by * ku;
+        for bx in 0..blocks_x {
+            let base_x = bx * ku;
+            let first = (base_y * w + base_x) * 4;
+            let color = &image.rgba[first..first + 4];
+            for dy in 0..ku {
+                let row = (base_y + dy) * w + base_x;
+                for dx in 0..ku {
+                    let at = (row + dx) * 4;
+                    if &image.rgba[at..at + 4] != color {
+                        return false;
+                    }
+                }
+            }
+        }
+    }
+    true
 }
 
 /// The side of a square that lowers no atlas's mip level: `SpriteLoader` caps it at the log2 of each sprite's

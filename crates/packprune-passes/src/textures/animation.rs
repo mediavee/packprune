@@ -4,6 +4,7 @@ use packprune_codec::png::{self, Image};
 use packprune_pack::json::{self, Member, Node, Value};
 use packprune_pack::{LogicalPath, PhysPath};
 use packprune_pass::{Edits, Loss, Pass, PassCx, PassError, Stage};
+use rayon::prelude::*;
 
 use super::{Use, Views, no_options};
 
@@ -11,9 +12,9 @@ const NAME: &str = "animation-frames";
 
 /// An animated strip whose frames repeat is rewritten with each distinct frame once, and
 /// a `frames` list that gives the original order and times, so the client keeps one CPU copy and one GPU texture per
-/// distinct frame. The list is the original sequence frame for frame, so an interpolated animation blends the same
-/// pictures in the same order. Only textures an atlas alone loads, whose name nothing outside the pack gives:
-/// anywhere else the client ignores the animation and draws the strip, and a name that stays is compared whole.
+/// distinct frame. When only one distinct frame exists (and `interpolate` is false), the animation section is removed
+/// completely (dropping the `.mcmeta` when empty) so the client uploads no dynamic frame texture and ticks nothing.
+/// Consecutive identical frames in non-interpolated animations are merged by summing their `time`.
 pub(crate) struct AnimationFrames;
 
 impl Pass for AnimationFrames {
@@ -36,8 +37,7 @@ impl Pass for AnimationFrames {
     fn run(&self, cx: &PassCx<'_>) -> Result<Edits, PassError> {
         let views = Views::new(cx, NAME)?;
         let usage = Use::new(cx, &views);
-        let mut edits = Edits::default();
-        let (mut textures, mut removed, mut before, mut after) = (0, 0, 0, 0);
+        let mut jobs: Vec<(PhysPath, PhysPath, bool)> = Vec::new();
         for texture in usage.stitched() {
             let kept =
                 LogicalPath::new(texture).is_ok_and(|logical| cx.kept_names.contains(&logical));
@@ -48,28 +48,57 @@ impl Pass for AnimationFrames {
             {
                 continue;
             }
+            let meta_logical = LogicalPath::new(&format!("{texture}.mcmeta")).ok();
+            let meta_kept = meta_logical
+                .as_ref()
+                .is_some_and(|l| cx.kept_names.contains(l));
             for png in usage.layers(texture).into_values() {
                 let meta = PhysPath::new(&format!("{png}.mcmeta")).expect("a valid path");
-                let Some(meta_entry) = cx.pack.files.get(&meta) else {
+                if !cx.pack.files.contains_key(&meta) {
                     continue;
-                };
+                }
                 if !paired_alone(&views, texture, &png, &meta) {
                     continue;
                 }
+                let can_remove_meta = !meta_kept && !cx.pinned.contains(&meta);
+                jobs.push((png, meta, can_remove_meta));
+            }
+        }
+        let outcomes: Vec<_> = jobs
+            .into_par_iter()
+            .filter_map(|(png, meta, can_remove_meta)| {
                 let png_bytes = &cx.pack.files[&png].blob;
-                if let Some(strip) = dedupe(png_bytes, &meta_entry.blob) {
-                    textures += 1;
-                    removed += strip.removed;
-                    before += png_bytes.len();
-                    after += strip.png.len();
-                    edits.replaced.insert(png, strip.png.into());
-                    edits.replaced.insert(meta, strip.meta.into());
+                let meta_bytes = &cx.pack.files[&meta].blob;
+                let strip = dedupe_with_policy(png_bytes, meta_bytes, can_remove_meta)?;
+                Some((png, meta, png_bytes.len(), strip))
+            })
+            .collect();
+        let mut edits = Edits::default();
+        let (mut textures, mut collapsed, mut removed, mut before, mut after) = (0, 0, 0, 0, 0);
+        for (png, meta, orig_len, strip) in outcomes {
+            textures += 1;
+            removed += strip.removed;
+            before += orig_len;
+            after += strip.png.len();
+            edits.replaced.insert(png, strip.png.into());
+            match strip.meta_action {
+                MetaAction::Replace(bytes) => {
+                    edits.replaced.insert(meta, bytes.into());
+                }
+                MetaAction::Remove => {
+                    collapsed += 1;
+                    edits.removed.insert(meta);
                 }
             }
         }
         edits
             .changes
             .push(format!("{textures} animated textures rewritten"));
+        if collapsed > 0 {
+            edits
+                .changes
+                .push(format!("{collapsed} static animations collapsed"));
+        }
         edits
             .changes
             .push(format!("{removed} repeated frames removed"));
@@ -94,9 +123,14 @@ fn paired_alone(views: &Views<'_>, texture: &str, png: &PhysPath, meta: &PhysPat
         .all(|view| shows(view, texture, png) == shows(view, &format!("{texture}.mcmeta"), meta))
 }
 
+pub(crate) enum MetaAction {
+    Replace(Vec<u8>),
+    Remove,
+}
+
 pub(crate) struct Strip {
     pub png: Vec<u8>,
-    pub meta: Vec<u8>,
+    pub meta_action: MetaAction,
     pub removed: usize,
 }
 
@@ -107,7 +141,16 @@ struct Step<'n> {
 }
 
 /// `None` when the animation has no frame to drop, or is not one the client reads the way this pass models it.
+#[cfg(test)]
 pub(crate) fn dedupe(png_bytes: &[u8], meta_bytes: &[u8]) -> Option<Strip> {
+    dedupe_with_policy(png_bytes, meta_bytes, true)
+}
+
+pub(crate) fn dedupe_with_policy(
+    png_bytes: &[u8],
+    meta_bytes: &[u8],
+    can_remove_meta: bool,
+) -> Option<Strip> {
     let mut root = json::parse(meta_bytes).ok()?;
     let animation = root.get("animation").filter(|node| node.is_object())?;
     let image = png::decode(png_bytes).ok()?;
@@ -119,6 +162,12 @@ pub(crate) fn dedupe(png_bytes: &[u8], meta_bytes: &[u8]) -> Option<Strip> {
     let rows = image.height / frame_height;
     let cells = (columns * rows) as usize;
     let sequence = sequence(animation, cells)?;
+    let interpolate = animation.path("interpolate").as_bool(false);
+    let default_time = animation
+        .get("frametime")
+        .and_then(Node::int)
+        .filter(|&t| t > 0)
+        .unwrap_or(1);
     let cell = |index: usize| {
         let index = index as u32;
         block(
@@ -144,7 +193,87 @@ pub(crate) fn dedupe(png_bytes: &[u8], meta_bytes: &[u8]) -> Option<Strip> {
         });
         mapped.push(known);
     }
-    if distinct.len() >= cells {
+
+    // Static animation: every played frame has identical pixels and no interpolation blends anything.
+    // Collapse to a single-frame static texture and remove the `animation` section (and empty `.mcmeta`).
+    if distinct.len() == 1 && !interpolate {
+        let pixels = cell(0);
+        let png = png::encode(&Image {
+            width: frame_width,
+            height: frame_height,
+            rgba: pixels,
+        })
+        .ok()?;
+        members(&mut root).retain(|member| &*member.name != "animation");
+        let meta_action = if members(&mut root).is_empty() && can_remove_meta {
+            MetaAction::Remove
+        } else {
+            MetaAction::Replace(json::write(&root))
+        };
+        return Some(Strip {
+            png,
+            meta_action,
+            removed: cells.saturating_sub(1),
+        });
+    }
+
+    // Merge consecutive identical frames when `!interpolate` (never across the loop boundary).
+    let mut merged_frames: Vec<(usize, i32)> = Vec::with_capacity(sequence.len());
+    for (step, &index) in sequence.iter().zip(&mapped) {
+        let time = step
+            .entry
+            .and_then(|e| e.is_object().then(|| e.get("time")).flatten())
+            .and_then(Node::int)
+            .filter(|&t| t > 0)
+            .unwrap_or(default_time);
+        if !interpolate
+            && let Some(last) = merged_frames.last_mut()
+            && last.0 == index
+            && let Some(summed) = last.1.checked_add(time)
+        {
+            last.1 = summed;
+            continue;
+        }
+        merged_frames.push((index, time));
+    }
+    let merged_nodes: Option<Vec<Node>> =
+        if !interpolate && merged_frames.len() >= 2 && merged_frames.len() < sequence.len() {
+            let merged: Vec<Node> = merged_frames
+                .into_iter()
+                .map(|(index, time)| {
+                    if time == default_time {
+                        Node::new(Value::Int(index as i32))
+                    } else {
+                        Node::new(Value::Object(vec![
+                            Member::new("index", Node::new(Value::Int(index as i32))),
+                            Member::new("time", Node::new(Value::Int(time))),
+                        ]))
+                    }
+                })
+                .collect();
+            let unmerged: Vec<Node> = sequence
+                .iter()
+                .zip(&mapped)
+                .map(|(step, &index)| {
+                    let index = Node::new(Value::Int(index as i32));
+                    match step.entry {
+                        Some(entry) if entry.is_object() => {
+                            let mut copy = entry.clone();
+                            set(&mut copy, "index", index);
+                            copy
+                        }
+                        _ => index,
+                    }
+                })
+                .collect();
+            let merged_len = json::write(&Node::new(Value::Array(merged.clone()))).len();
+            let unmerged_len = json::write(&Node::new(Value::Array(unmerged))).len();
+            (merged_len < unmerged_len).then_some(merged)
+        } else {
+            None
+        };
+
+    if distinct.len() >= cells && merged_nodes.is_none() {
         return None;
     }
     let kept = distinct.len() as u32;
@@ -170,21 +299,24 @@ pub(crate) fn dedupe(png_bytes: &[u8], meta_bytes: &[u8]) -> Option<Strip> {
             rgba[at..at + row_bytes].copy_from_slice(&pixels[start..start + row_bytes]);
         }
     }
-    let frames: Vec<Node> = sequence
-        .iter()
-        .zip(&mapped)
-        .map(|(step, &index)| {
-            let index = Node::new(Value::Int(index as i32));
-            match step.entry {
-                Some(entry) if entry.is_object() => {
-                    let mut copy = entry.clone();
-                    set(&mut copy, "index", index);
-                    copy
+    let frames: Vec<Node> = match merged_nodes {
+        Some(merged) => merged,
+        None => sequence
+            .iter()
+            .zip(&mapped)
+            .map(|(step, &index)| {
+                let index = Node::new(Value::Int(index as i32));
+                match step.entry {
+                    Some(entry) if entry.is_object() => {
+                        let mut copy = entry.clone();
+                        set(&mut copy, "index", index);
+                        copy
+                    }
+                    _ => index,
                 }
-                _ => index,
-            }
-        })
-        .collect();
+            })
+            .collect(),
+    };
     let png = png::encode(&Image {
         width,
         height,
@@ -199,7 +331,7 @@ pub(crate) fn dedupe(png_bytes: &[u8], meta_bytes: &[u8]) -> Option<Strip> {
     set(animation, "frames", Node::new(Value::Array(frames)));
     Some(Strip {
         png,
-        meta: json::write(&root),
+        meta_action: MetaAction::Replace(json::write(&root)),
         removed: cells - kept as usize,
     })
 }

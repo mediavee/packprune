@@ -4,6 +4,7 @@ use packprune_graph::atlases::{AtlasFile, VanillaAtlases, ViewAtlases};
 use packprune_pack::{FileKind, LogicalPath, PhysPath, ResourceId, View, ViewId};
 use packprune_pass::{FileOptimizer, Pass, PassCx, PassError};
 
+mod atlas_budget;
 mod png;
 mod prune;
 mod texel;
@@ -14,6 +15,7 @@ pub(crate) mod tests;
 
 pub fn passes() -> Vec<Box<dyn Pass>> {
     vec![
+        Box::new(atlas_budget::AtlasBudget),
         Box::new(prune::PruneUnnamedSprites),
         Box::new(texel::TexelDownscale),
     ]

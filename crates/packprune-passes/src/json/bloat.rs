@@ -1,8 +1,9 @@
 use std::ops::Range;
 
-use packprune_pack::FileKind;
 use packprune_pack::json::{self, Splice, Value};
+use packprune_pack::{FileKind, PhysPath};
 use packprune_pass::{Edits, Loss, Pass, PassCx, PassError, Stage};
+use rayon::prelude::*;
 
 use super::{kind, no_options};
 
@@ -34,16 +35,23 @@ impl Pass for BloatKeys {
     }
 
     fn run(&self, cx: &PassCx<'_>) -> Result<Edits, PassError> {
+        let rewritten: Vec<(PhysPath, Vec<u8>, usize)> = cx
+            .pack
+            .files
+            .par_iter()
+            .filter_map(|(path, entry)| {
+                if kind(cx, path) != FileKind::Model {
+                    return None;
+                }
+                let (debloated, removed) = debloat(&entry.blob)?;
+                Some((path.clone(), debloated, removed))
+            })
+            .collect();
         let mut edits = Edits::default();
         let mut keys = 0;
-        for (path, entry) in &cx.pack.files {
-            if kind(cx, path) != FileKind::Model {
-                continue;
-            }
-            if let Some((debloated, removed)) = debloat(&entry.blob) {
-                keys += removed;
-                edits.replaced.insert(path.clone(), debloated.into());
-            }
+        for (path, debloated, removed) in rewritten {
+            keys += removed;
+            edits.replaced.insert(path, debloated.into());
         }
         edits.changes.push(format!(
             "{keys} keys removed from {} models",

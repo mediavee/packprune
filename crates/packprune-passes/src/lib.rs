@@ -2,6 +2,7 @@
 
 pub mod crop;
 pub mod encode;
+pub mod fonts;
 pub mod json;
 pub mod lossy;
 pub mod models;
@@ -18,6 +19,7 @@ pub fn passes() -> Vec<Box<dyn Pass>> {
         models::passes(),
         textures::passes(),
         crop::passes(),
+        fonts::passes(),
         overlays::passes(),
         names::passes(),
         json::passes(),

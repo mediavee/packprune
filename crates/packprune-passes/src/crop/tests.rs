@@ -4,7 +4,7 @@
 use packprune_pack::rules::Glob;
 use packprune_pass::{Loss, Scope};
 
-use super::uv_crop::UvCrop;
+use super::uv_crop::{UvCrop, UvRepack};
 use crate::textures::tests::support::{Files, Fixture, Ran, decode, files_of, png, put, text};
 
 const MODEL: &str = "assets/fx/models/item/box.json";
@@ -13,6 +13,7 @@ const BLOCK_SKIN: &str = "assets/fx/textures/block/skin.png";
 
 const EXACT: UvCrop = UvCrop { particles: false };
 const PARTICLES: UvCrop = UvCrop { particles: true };
+const REPACK: UvRepack = UvRepack { particles: false };
 
 /// An item drawn by [`MODEL`], whose one cube has `faces` and samples `fx:item/skin` as `#skin`.
 fn crop_pack(faces: &str, width: u32, height: u32) -> Files {
@@ -518,6 +519,31 @@ fn a_crop_no_float_keeps_exact_is_skipped_and_reported() {
                 == format!("1 textures left whole, no crop keeps their UVs exact: {SKIN}")),
         "{:?}",
         ran.changes()
+    );
+}
+
+#[test]
+fn uv_repack_packs_disjoint_corner_islands_into_a_smaller_canvas() {
+    // Two 4x4 islands in opposite corners of a 16x16 texture: uv-crop cannot shrink the bounding box,
+    // while uv-repack packs both disjoint islands into an 8x4 (32 texel, -87.5%) canvas and passes the oracle.
+    let files = crop_pack(
+        r##""north": {"uv": [0, 0, 4, 4], "texture": "#skin"}, "south": {"uv": [12, 12, 16, 16], "texture": "#skin"}"##,
+        16,
+        16,
+    );
+    let cropped = crop(&files);
+    assert_eq!(
+        cropped.size(SKIN),
+        (16, 16),
+        "single bounding box cannot shrink opposite corners"
+    );
+
+    let repacked = Fixture::new().same(&files, &[], &REPACK);
+    let (w, h) = repacked.size(SKIN);
+    assert_eq!(
+        u64::from(w) * u64::from(h),
+        32,
+        "two 4x4 islands pack into 32 texels (got {w}x{h})"
     );
 }
 

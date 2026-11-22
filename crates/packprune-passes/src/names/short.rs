@@ -6,8 +6,35 @@ use packprune_graph::atlases::{AtlasFile, VanillaAtlases, ViewAtlases};
 use packprune_pack::json;
 use packprune_pack::{JavaPattern, LogicalPath, PhysPath, ResourceId};
 use packprune_pass::{Edits, Loss, Pass, PassCx, PassError, Stage};
+use schemars::JsonSchema;
+use serde::Deserialize;
 
 pub struct ShortNames;
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Deserialize, JsonSchema)]
+#[serde(rename_all = "lowercase")]
+enum Mode {
+    #[default]
+    Uuids,
+    All,
+}
+
+#[derive(Default, Deserialize, JsonSchema)]
+#[serde(default, deny_unknown_fields)]
+struct Options {
+    /// Which non-vanilla assets to shorten: `uuids` (default, 36-char UUID names) or `all` (any safe
+    /// referenced custom-namespace model, texture or sound whose shortened path is strictly shorter).
+    mode: Mode,
+}
+
+impl Options {
+    fn read(options: &toml::Table) -> Result<Self, String> {
+        options
+            .clone()
+            .try_into()
+            .map_err(|error: toml::de::Error| error.to_string())
+    }
+}
 
 type Origins = BTreeMap<LogicalPath, BTreeSet<PhysPath>>;
 type Sprites = BTreeMap<LogicalPath, ResourceId>;
@@ -23,13 +50,43 @@ impl Pass for ShortNames {
         Loss::Lossless
     }
     fn options_schema(&self) -> schemars::Schema {
-        schemars::schema_for!(crate::overlays::json::NoOptions)
+        schemars::schema_for!(Options)
+    }
+    fn validate_options(&self, options: &toml::Table) -> Result<(), String> {
+        Options::read(options).map(drop)
     }
 
     fn run(&self, cx: &PassCx<'_>) -> Result<Edits, PassError> {
+        let options = Options::read(cx.options).map_err(|why| PassError::Refused {
+            pass: self.name(),
+            why,
+        })?;
+        let mut referenced = BTreeSet::<LogicalPath>::new();
+        if options.mode == Mode::All {
+            for reference in cx.index.all().values().flatten() {
+                match &reference.names {
+                    Names::File { logical, .. } => {
+                        referenced.insert(logical.clone());
+                    }
+                    Names::Sprite { sprite, .. } => {
+                        let ns = cx.run.interner.resolve(sprite.ns);
+                        let p = cx.run.interner.resolve(sprite.path);
+                        if let Ok(logical) =
+                            LogicalPath::new(&format!("assets/{ns}/textures/{p}.png"))
+                        {
+                            referenced.insert(logical);
+                        }
+                    }
+                    Names::Text { .. }
+                    | Names::SpriteName { .. }
+                    | Names::SoundEvent { .. }
+                    | Names::Beside { .. } => {}
+                }
+            }
+        }
         let mut physical = BTreeMap::<LogicalPath, Vec<PhysPath>>::new();
         let mut namespaces = BTreeSet::from(["minecraft".to_owned()]);
-        let mut uuids = 0;
+        let mut candidates_seen = 0;
         for path in cx.pack.files.keys() {
             let Some(logical) = cx.layout.split(path).1 else {
                 continue;
@@ -37,8 +94,16 @@ impl Pass for ShortNames {
             if let Some(namespace) = logical.as_str().split('/').nth(1) {
                 namespaces.insert(namespace.to_owned());
             }
-            if uuid_file(logical.as_str()).is_some() && path.as_str().ends_with(logical.as_str()) {
-                uuids += 1;
+            let eligible = match options.mode {
+                Mode::Uuids => uuid_file(logical.as_str()).is_some(),
+                Mode::All => {
+                    candidate_file(logical.as_str(), Mode::All).is_some()
+                        && referenced.contains(&logical)
+                        && !cx.vanilla.names.contains(logical.as_str())
+                }
+            };
+            if eligible && path.as_str().ends_with(logical.as_str()) {
+                candidates_seen += 1;
                 if !cx.kept_names.contains(&logical) {
                     physical.entry(logical).or_default().push(path.clone());
                 }
@@ -49,7 +114,7 @@ impl Pass for ShortNames {
                 physical.remove(logical);
             }
         }
-        let (mut sprites, origins, mut unsafe_files) = sprite_trouble(cx, &physical)?;
+        let (mut sprites, origins, mut unsafe_files) = sprite_trouble(cx, &physical, options.mode)?;
         for reference in cx.index.all().values().flatten() {
             if let Names::Sprite {
                 sprite,
@@ -72,8 +137,8 @@ impl Pass for ShortNames {
         let filters = filters_after(cx, &sprites, &origins)?;
         let namespace = free_namespace(&namespaces, &filters);
         let (ids, counters) = loop {
-            let (ids, counters) = ids(&physical, &origins);
-            let differently: Vec<_> = sprites
+            let (ids, counters) = ids(&physical, &origins, options.mode);
+            let mut drop_set: Vec<LogicalPath> = sprites
                 .iter()
                 .filter_map(|(logical, sprite)| {
                     let renamed = ids.get(logical)?;
@@ -85,16 +150,34 @@ impl Pass for ShortNames {
                         .then(|| logical.clone())
                 })
                 .collect();
-            if differently.is_empty() {
+            if options.mode == Mode::All {
+                for (logical, id) in &ids {
+                    let (kind, _, suffix) =
+                        candidate_file(logical.as_str(), options.mode).expect("candidate");
+                    let target_len = "assets/".len()
+                        + namespace.len()
+                        + 1
+                        + kind.len()
+                        + 1
+                        + id.len()
+                        + suffix.len();
+                    if target_len >= logical.as_str().len() {
+                        drop_set.push(logical.clone());
+                    }
+                }
+            }
+            if drop_set.is_empty() {
                 break (ids, counters);
             }
-            for logical in differently {
+            for logical in drop_set {
                 physical.remove(&logical);
+                sprites.remove(&logical);
             }
         };
         let mut edits = Edits::default();
         for (logical, paths) in &physical {
-            let (kind, _, suffix) = uuid_file(logical.as_str()).expect("candidate");
+            let (kind, _, suffix) =
+                candidate_file(logical.as_str(), options.mode).expect("candidate");
             let id = &ids[logical];
             let target = LogicalPath::new(&format!("assets/{namespace}/{kind}/{id}{suffix}"))
                 .expect("generated path");
@@ -120,9 +203,13 @@ impl Pass for ShortNames {
             count("textures"),
             count("sounds")
         ));
+        let label = match options.mode {
+            Mode::Uuids => "UUID-named files",
+            Mode::All => "candidate files",
+        };
         edits
             .changes
-            .push(format!("{} UUID-named files kept", uuids - physical.len()));
+            .push(format!("{} {label} kept", candidates_seen - physical.len()));
         Ok(edits)
     }
 }
@@ -132,6 +219,42 @@ fn fail(error: impl ToString) -> PassError {
         pass: "short-names",
         why: error.to_string(),
     }
+}
+
+fn candidate_file(logical: &str, mode: Mode) -> Option<(&str, &str, &str)> {
+    match mode {
+        Mode::Uuids => uuid_file(logical),
+        Mode::All => custom_file(logical),
+    }
+}
+
+fn custom_file(logical: &str) -> Option<(&str, &str, &str)> {
+    let rest = logical.strip_prefix("assets/")?;
+    let (namespace, rest) = rest.split_once('/')?;
+    if namespace.is_empty()
+        || namespace == "minecraft"
+        || !namespace
+            .bytes()
+            .all(|byte| matches!(byte, b'a'..=b'z' | b'0'..=b'9' | b'_' | b'.' | b'-'))
+    {
+        return None;
+    }
+    let (kind, file) = rest.split_once('/')?;
+    let suffix = match kind {
+        "models" => ".json",
+        "textures" => ".png",
+        "sounds" => ".ogg",
+        _ => return None,
+    };
+    let stem = file.strip_suffix(suffix)?;
+    if stem.is_empty()
+        || !stem
+            .bytes()
+            .all(|byte| matches!(byte, b'a'..=b'z' | b'0'..=b'9' | b'_' | b'.' | b'-' | b'/'))
+    {
+        return None;
+    }
+    Some((kind, stem, suffix))
 }
 
 fn uuid_file(logical: &str) -> Option<(&str, &str, &str)> {
@@ -173,15 +296,16 @@ fn uuid_file(logical: &str) -> Option<(&str, &str, &str)> {
 fn sprite_trouble(
     cx: &PassCx<'_>,
     candidates: &BTreeMap<LogicalPath, Vec<PhysPath>>,
+    mode: Mode,
 ) -> Result<(Sprites, Origins, BTreeSet<LogicalPath>), PassError> {
     let by_id: BTreeMap<_, _> = candidates
         .keys()
         .filter_map(|logical| {
-            let (kind, uuid, _) = uuid_file(logical.as_str())?;
+            let (kind, stem, _) = candidate_file(logical.as_str(), mode)?;
             let namespace = logical.as_str().split('/').nth(1)?;
             (kind == "textures").then(|| {
                 (
-                    ResourceId::parse(&cx.run.interner, &format!("{namespace}:{uuid}"))
+                    ResourceId::parse(&cx.run.interner, &format!("{namespace}:{stem}"))
                         .expect("candidate id"),
                     logical.clone(),
                 )
@@ -377,6 +501,7 @@ fn base36(mut n: usize) -> String {
 fn ids(
     physical: &BTreeMap<LogicalPath, Vec<PhysPath>>,
     origins: &Origins,
+    mode: Mode,
 ) -> (BTreeMap<LogicalPath, String>, BTreeMap<String, usize>) {
     let mut signatures = BTreeMap::<String, Vec<LogicalPath>>::new();
     for (texture, files) in origins {
@@ -405,12 +530,19 @@ fn ids(
     let mut ids = BTreeMap::new();
     let mut counters = BTreeMap::<String, usize>::new();
     for logical in physical.keys() {
-        let (kind, _, _) = uuid_file(logical.as_str()).expect("candidate");
+        let (kind, stem, _) = candidate_file(logical.as_str(), mode).expect("candidate");
         let n = counters.entry(kind.to_owned()).or_default();
+        // Minecraft 26.2 skips `TextureUtil.solidify()` when a sprite path starts with `item/`: preserve that prefix
+        // so sprite mipmap/solidify behavior never changes.
+        let item_prefix = if kind == "textures" && stem.starts_with("item/") {
+            "item/"
+        } else {
+            ""
+        };
         ids.insert(
             logical.clone(),
             format!(
-                "{}{}",
+                "{item_prefix}{}{}",
                 folders.get(logical).map_or("", String::as_str),
                 base36(*n)
             ),

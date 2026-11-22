@@ -6,6 +6,8 @@ use packprune_graph::{Names, Reference};
 use packprune_pack::json::{self, Node};
 use packprune_pack::{Digest, FileKind, LogicalPath, PhysPath, ResourceId, TextureSize};
 use packprune_pass::{Edits, Loss, Pass, PassCx, PassError, Stage};
+use rayon::prelude::*;
+use sha2::{Digest as _, Sha256};
 
 use super::{Use, Views, at, file, no_options};
 
@@ -90,8 +92,8 @@ fn logical(texture: &str) -> LogicalPath {
     LogicalPath::new(texture).expect("a texture of a view is a logical path")
 }
 
-/// One layer of a texture as the client draws it: the layer, the decoded pixels, the digest of its `.mcmeta`.
-type Signature = Vec<(String, Vec<u8>, Option<Digest>)>;
+/// One layer of a texture as the client draws it: the layer, SHA-256 of `(w, h, RGBA)`, and `.mcmeta` digest.
+type Signature = Vec<(String, [u8; 32], Option<Digest>)>;
 
 /// The groups of two or more textures that draw the same everywhere: the same pixels and metadata bytes in the same
 /// layers, each the sole input of one sprite id, in the same atlases of the same views. Each group is sorted.
@@ -116,31 +118,60 @@ fn identical<'v>(cx: &PassCx<'_>, usage: &Use<'v>) -> Vec<Vec<&'v str>> {
         }
         by_size.entry(key).or_default().push(texture);
     }
-    let mut groups = Vec::new();
-    for sized in by_size.into_values().filter(|sized| sized.len() > 1) {
-        let mut by_signature: BTreeMap<Signature, Vec<&str>> = BTreeMap::new();
-        for texture in sized {
-            if let Some(signature) = signature(cx, usage, texture) {
-                by_signature.entry(signature).or_default().push(texture);
-            }
+    let buckets: Vec<Vec<&str>> = by_size
+        .into_values()
+        .filter(|sized| sized.len() > 1)
+        .collect();
+    let flat_candidates: Vec<(usize, &str)> = buckets
+        .iter()
+        .enumerate()
+        .flat_map(|(bucket_idx, sized)| sized.iter().map(move |&t| (bucket_idx, t)))
+        .collect();
+    let hashed: Vec<(usize, &str, Option<Signature>)> = flat_candidates
+        .into_par_iter()
+        .map(|(bucket_idx, texture)| (bucket_idx, texture, signature(cx, usage, texture)))
+        .collect();
+    let mut per_bucket: Vec<BTreeMap<Signature, Vec<&str>>> =
+        (0..buckets.len()).map(|_| BTreeMap::new()).collect();
+    for (bucket_idx, texture, sig) in hashed {
+        if let Some(sig) = sig {
+            per_bucket[bucket_idx].entry(sig).or_default().push(texture);
         }
+    }
+    let mut groups = Vec::new();
+    for by_signature in per_bucket {
         groups.extend(by_signature.into_values().filter(|group| group.len() > 1));
     }
     groups
 }
 
-/// Per layer, the decoded pixels and the metadata digest; `None` when a PNG does not decode.
+/// Per layer, the SHA-256 of `(width, height, RGBA)` (cached by blob digest) and the metadata digest; `None` when a
+/// PNG does not decode.
 fn signature(cx: &PassCx<'_>, usage: &Use<'_>, texture: &str) -> Option<Signature> {
     usage
         .layers(texture)
         .into_iter()
         .map(|(layer, png)| {
-            let image = png::decode(&cx.pack.files[&png].blob).ok()?;
+            let entry = &cx.pack.files[&png];
+            let hash: [u8; 32] = if let Some(cached) = cx.cache.get("rgba-sha256", &entry.digest.0)
+                && cached.len() == 32
+            {
+                cached.try_into().expect("32 bytes")
+            } else {
+                let image = png::decode(&entry.blob).ok()?;
+                let mut hasher = Sha256::new();
+                hasher.update(image.width.to_le_bytes());
+                hasher.update(image.height.to_le_bytes());
+                hasher.update(&image.rgba);
+                let digest: [u8; 32] = hasher.finalize().into();
+                cx.cache.put("rgba-sha256", &entry.digest.0, &digest);
+                digest
+            };
             let meta = PhysPath::new(&format!("{png}.mcmeta"))
                 .ok()
                 .and_then(|meta| cx.pack.files.get(&meta))
                 .map(|entry| entry.digest);
-            Some((layer.to_owned(), image.rgba, meta))
+            Some((layer.to_owned(), hash, meta))
         })
         .collect()
 }

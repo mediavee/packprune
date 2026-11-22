@@ -1,7 +1,9 @@
 use std::collections::BTreeSet;
 
+use packprune_pack::PhysPath;
 use packprune_pack::json::Node;
 use packprune_pass::{Edits, Loss, Pass, PassCx, PassError, Stage};
+use rayon::prelude::*;
 
 use super::{models, text};
 
@@ -25,50 +27,60 @@ impl Pass for DegenerateFaces {
     }
 
     fn run(&self, cx: &PassCx<'_>) -> Result<Edits, PassError> {
-        let mut edits = Edits::default();
-        let (mut faces, mut elements, mut files) = (0, 0, 0);
-        for model in models(cx) {
-            let mut removed = BTreeSet::new();
-            for (i, element) in model.json.path("elements").items().iter().enumerate() {
-                let Some(from) = point(element.path("from")) else {
-                    continue;
-                };
-                let Some(to) = point(element.path("to")) else {
-                    continue;
-                };
-                let drawn = element.path("faces");
-                let (x, y, z) = (from[0] != to[0], from[1] != to[1], from[2] != to[2]);
-                let present: Vec<_> = ["down", "up", "north", "south", "west", "east"]
-                    .into_iter()
-                    .filter(|direction| drawn.path(direction).is_object())
-                    .collect();
-                let flat: Vec<_> = present
-                    .iter()
-                    .filter(|direction| !match **direction {
-                        "west" | "east" => y && z,
-                        "down" | "up" => x && z,
-                        _ => x && y,
-                    })
-                    .collect();
-                if flat.is_empty() {
-                    continue;
-                }
-                let pointer = format!("/elements/{i}");
-                if flat.len() == present.len() {
-                    removed.insert(pointer);
-                    elements += 1;
-                } else {
-                    for direction in &flat {
-                        removed.insert(format!("{pointer}/faces/{direction}"));
+        let rewritten: Vec<(PhysPath, usize, usize, Vec<u8>)> = models(cx)
+            .into_par_iter()
+            .filter_map(|model| {
+                let mut removed = BTreeSet::new();
+                let (mut faces, mut elements) = (0usize, 0usize);
+                for (i, element) in model.json.path("elements").items().iter().enumerate() {
+                    let Some(from) = point(element.path("from")) else {
+                        continue;
+                    };
+                    let Some(to) = point(element.path("to")) else {
+                        continue;
+                    };
+                    let drawn = element.path("faces");
+                    let (x, y, z) = (from[0] != to[0], from[1] != to[1], from[2] != to[2]);
+                    let present: Vec<_> = ["down", "up", "north", "south", "west", "east"]
+                        .into_iter()
+                        .filter(|direction| drawn.path(direction).is_object())
+                        .collect();
+                    let flat: Vec<_> = present
+                        .iter()
+                        .filter(|direction| !match **direction {
+                            "west" | "east" => y && z,
+                            "down" | "up" => x && z,
+                            _ => x && y,
+                        })
+                        .collect();
+                    if flat.is_empty() {
+                        continue;
                     }
+                    let pointer = format!("/elements/{i}");
+                    if flat.len() == present.len() {
+                        removed.insert(pointer);
+                        elements += 1;
+                    } else {
+                        for direction in &flat {
+                            removed.insert(format!("{pointer}/faces/{direction}"));
+                        }
+                    }
+                    faces += flat.len();
                 }
-                faces += flat.len();
-            }
-            if !removed.is_empty() {
+                if removed.is_empty() {
+                    return None;
+                }
                 let bytes = text::remove(&cx.pack.files[model.physical].blob, &removed);
-                edits.replaced.insert(model.physical.clone(), bytes.into());
-                files += 1;
-            }
+                Some((model.physical.clone(), faces, elements, bytes))
+            })
+            .collect();
+        let mut edits = Edits::default();
+        let (mut faces, mut elements) = (0usize, 0usize);
+        let files = rewritten.len();
+        for (physical, f, e, bytes) in rewritten {
+            faces += f;
+            elements += e;
+            edits.replaced.insert(physical, bytes.into());
         }
         edits.changes = vec![
             format!("{faces} zero-area faces dropped"),

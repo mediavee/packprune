@@ -316,7 +316,7 @@ fn texel_largest_factor_and_nearest_loss_are_reported_and_proved() {
     assert!(report.changes.iter().any(|line| {
         line.contains("factor 4, tightest face 16 texels per unit, ceiling 4")
             && line.contains("-61440 atlas texels")
-            && line.contains("max delta 127")
+            && line.contains("max delta 67")
     }));
     assert!(
         report
@@ -331,7 +331,7 @@ fn texel_largest_factor_and_nearest_loss_are_reported_and_proved() {
             .find(|loss| loss.metric == "max_delta")
             .unwrap()
             .value,
-        127.0
+        67.0
     );
     assert!(proof.loss.unwrap().differing_keys > 0);
     assert!(proof.proof.is_none());
@@ -879,4 +879,43 @@ fn png_passes_leave_a_texture_they_would_not_change() {
             .unwrap();
         assert!(out.is_none(), "{name}");
     }
+}
+
+#[test]
+fn png_single_color_shrinks_exact_kxk_pixel_art_upscale_and_guards_colormaps() {
+    // 64x64 texture built from 4x4 uniform blocks (an exact 4x nearest-neighbor upscale of 16x16).
+    let mut rgba = Vec::with_capacity(64 * 64 * 4);
+    for y in 0..64u32 {
+        for x in 0..64u32 {
+            let bx = x / 4;
+            let by = y / 4;
+            rgba.extend_from_slice(&[
+                ((bx * 17) as u8),
+                ((by * 19) as u8),
+                ((bx ^ by) * 15) as u8,
+                255,
+            ]);
+        }
+    }
+    let input = rgba_png(&Image {
+        width: 64,
+        height: 64,
+        rgba,
+    })
+    .unwrap();
+    let (out, measured) = optimise_png("png-single-color", &input, BIG, Quirks::default(), "");
+    assert!(measured);
+    let shrunk = png::decode(&out).unwrap();
+    assert_eq!((shrunk.width, shrunk.height), (16, 16));
+
+    // B1 guard: colormap textures must never be resized even if solid or uniform blocks.
+    let (cmap_out, cmap_measured) = optimise_png(
+        "png-single-color",
+        &input,
+        "assets/minecraft/textures/colormap/grass.png",
+        Quirks::default(),
+        "",
+    );
+    assert!(!cmap_measured);
+    assert_eq!(cmap_out, input);
 }

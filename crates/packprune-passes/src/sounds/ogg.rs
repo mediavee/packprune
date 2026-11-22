@@ -11,6 +11,12 @@ impl Ogg {
         self.samples as f64 / f64::from(self.rate)
     }
 
+    /// Resident 16-bit OpenAL PCM bytes when loaded non-streamed (`2 * channels * samples`).
+    pub fn pcm_bytes(self) -> u64 {
+        2u64.saturating_mul(u64::from(self.channels))
+            .saturating_mul(self.samples)
+    }
+
     pub fn read(bytes: &[u8]) -> Option<Self> {
         let mut at = 0;
         let mut info = None;

@@ -125,12 +125,20 @@ Lossless graph passes:
 |---|---|---|
 | `degenerate-faces` | Models | removes zero-area model faces, and elements left with none |
 | `identical-models` | Models | keeps one of several models with identical content; references follow |
+| `identity-rotations` | Models | strips zero-angle single-axis and 26.2 Euler element rotations whose vertex coordinates stay bit-identical, plus default `rescale: false` and zero Euler axes |
+| `model-defaults` | Models | removes Blockbench editor keys inside elements (`name`, `color`), redundant model/face/display defaults, identical `*_lefthand` transforms, and empty item `tints: []` |
 | `shared-display` | Models | moves repeated `display` blocks into shared generated parent models |
+| `shared-elements` | Models | moves repeated `elements` arrays into shared generated parent models |
 | `identical-sprites` | Textures | keeps one of several textures with the same pixels and `.mcmeta`; models follow |
-| `animation-frames` | Textures | rewrites animated strips with each distinct frame once and a `frames` list |
+| `identical-sounds` | Textures | keeps one of several `.ogg` sounds with identical decoded PCM; `sounds.json` follows |
+| `animation-frames` | Textures | rewrites animated strips with each distinct frame once, merges consecutive repeats, and collapses 1-frame static strips |
 | `uv-crop` | Textures | crops textures to the texels their model faces sample, every mip level unchanged |
+| `uv-repack` | Textures | repacks disjoint model-face UV islands into a smaller mip-aligned power-of-two texture |
+| `font-dedupe` | Fonts | merges bitmap font PNGs with bit-identical RGBA pixels (including RGB under alpha 0); shader-safe |
+| `font-pack` | Fonts | packs same-cell/height/ascent single- and small multi-glyph bitmap providers into grid PNG sheets; shader-safe |
+| `font-trim` | Fonts | trims empty transparent borders/rows from bitmap font sheets (updating `height`/`ascent`) and drops shadowed providers |
 | `overlay-merge` | Overlays | removes redundant overlay copies, merges overlays, drops those left empty |
-| `short-names` | Names | renames UUID-named models, textures and sounds to short ids in a free namespace |
+| `short-names` | Names | renames UUID-named (or with `mode = "all"`, all safe custom-namespace) models, textures and sounds to short ids in a free namespace |
 | `atlas-directory` | Json | turns runs of `single` atlas sources into `directory` sources |
 | `short-json` | Json | writes numbers in their shortest exact form and drops a redundant `minecraft:` from ids |
 | `bloat-keys` | Json | removes the root keys of a model that Blockbench or the vanilla models write and no client reads (`credit`, `groups`, `__comment`) |
@@ -154,10 +162,13 @@ Lossy graph passes:
 | Pass | Stage | Does |
 |---|---|---|
 | `uv-crop-particles` | Textures | `uv-crop` that also crops the textures models use as their particle |
+| `uv-repack-particles` | Textures | `uv-repack` that also repacks the textures models use as their particle |
 | `overlay-floor` | Overlays | drops overlay entries below `oldest_format`, and their files; `oldest_format` in the profile enables it on every path |
+| `atlas-budget` | Lossy | simulates Minecraft's atlas stitcher and downscales the largest sprites until each atlas drops to the target GPU memory tier |
+| `font-downscale` | Lossy | downscales oversized bitmap font sheets so glyphs pack into far fewer 256×256 GPU glyph pages |
 | `prune-unnamed-sprites` | Lossy | removes `single` atlas sprites nothing names |
 | `texel-downscale` | Lossy | downscales textures whose tightest face exceeds `ceiling` texels per model unit |
-| `stream-sounds` | Lossy | marks sounds longer than `seconds` as streamed |
+| `stream-sounds` | Lossy | marks sounds longer than `seconds` (or above `max_pcm_bytes`) as streamed |
 | `sound-mono` | Lossy | downmixes stereo sounds to mono |
 | `sound-rate` | Lossy | resamples sounds above `cap` Hz |
 | `ogg-transcode` | Lossy | re-encodes Ogg Vorbis at `quality`, kept only when smaller |
