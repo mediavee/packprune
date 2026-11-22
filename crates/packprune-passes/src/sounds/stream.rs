@@ -15,11 +15,16 @@ pub(super) struct StreamSounds;
 #[serde(default, deny_unknown_fields)]
 struct Options {
     seconds: f64,
+    /// Optional 16-bit OpenAL PCM byte ceiling: any sound whose decoded buffer exceeds this size is streamed.
+    max_pcm_bytes: Option<u64>,
 }
 
 impl Default for Options {
     fn default() -> Self {
-        Self { seconds: 5.0 }
+        Self {
+            seconds: 5.0,
+            max_pcm_bytes: None,
+        }
     }
 }
 
@@ -120,7 +125,12 @@ impl Pass for StreamSounds {
                             .get(&target)
                             .and_then(|file| Ogg::read(&file.blob))
                     });
-                    let Some(ogg) = ogg.filter(|ogg| ogg.seconds() > options.seconds) else {
+                    let Some(ogg) = ogg.filter(|ogg| {
+                        ogg.seconds() > options.seconds
+                            || options
+                                .max_pcm_bytes
+                                .is_some_and(|cap| ogg.pcm_bytes() > cap)
+                    }) else {
                         continue;
                     };
                     let mut splice = stream(entry, input);

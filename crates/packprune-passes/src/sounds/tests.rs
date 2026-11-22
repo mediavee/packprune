@@ -14,9 +14,11 @@ fn options_validate_at_load() {
             pass.validate_options(&"unknown = 1".parse().unwrap())
                 .is_err()
         );
-        let (valid, invalid): (&str, &[&str]) = if pass.name() == "stream-sounds" {
+        let (valid, invalid): (&str, &[&str]) = if pass.name() == "identical-sounds" {
+            ("", &["unknown = 1"])
+        } else if pass.name() == "stream-sounds" {
             (
-                "seconds = 1",
+                "seconds = 1\nmax_pcm_bytes = 65536",
                 &["seconds = -1", "seconds = nan", "seconds = 'long'"],
             )
         } else {
@@ -362,6 +364,7 @@ fn registry_lists_only_lossy_d5_passes_and_png_optimisers() {
     assert_eq!(
         passes.iter().map(|pass| pass.name()).collect::<Vec<_>>(),
         [
+            "identical-sounds",
             "stream-sounds",
             "sound-mono",
             "sound-rate",
@@ -369,12 +372,90 @@ fn registry_lists_only_lossy_d5_passes_and_png_optimisers() {
             "audio-to-ogg"
         ]
     );
-    assert!(
-        passes
-            .iter()
-            .all(|pass| pass.loss() == packprune_pass::Loss::Lossy)
-    );
+    assert!(passes.iter().all(|pass| {
+        if pass.name() == "identical-sounds" {
+            pass.loss() == packprune_pass::Loss::Lossless
+        } else {
+            pass.loss() == packprune_pass::Loss::Lossy
+        }
+    }));
     for pass in passes {
         assert!(pass.options_schema().as_object().is_some());
     }
+}
+
+#[test]
+fn identical_sounds_deduplicates_matching_ogg_files_and_rewrites_sounds_json() {
+    let mut files = sounds(r#"{"a":{"sounds":["fx:one"]},"b":{"sounds":["fx:two"]}}"#);
+    files.insert("assets/fx/sounds/one.ogg".into(), SHORT.to_vec());
+    files.insert("assets/fx/sounds/two.ogg".into(), SHORT.to_vec());
+    let fixture = Fixture::new();
+    let out = fixture.execute(
+        &files,
+        &super::identical::IdenticalSounds,
+        "",
+        Scope::all(),
+        &[],
+    );
+    assert!(
+        out.state
+            .pack
+            .files
+            .contains_key(&physical("assets/fx/sounds/one.ogg"))
+    );
+    assert!(
+        !out.state
+            .pack
+            .files
+            .contains_key(&physical("assets/fx/sounds/two.ogg"))
+    );
+    let sj = std::str::from_utf8(bytes(&out, "assets/fx/sounds.json")).unwrap();
+    assert!(!sj.contains("fx:two"), "{sj}");
+    assert!(sj.contains("fx:one"), "{sj}");
+}
+
+#[test]
+fn stream_sounds_max_pcm_bytes_triggers_streaming_below_duration_threshold() {
+    let files = sounds(r#"{"a":{"sounds":["fx:short"]}}"#);
+    let fixture = Fixture::new();
+    // SHORT is ~0.2s (< default 5s), so seconds alone doesn't stream it, but max_pcm_bytes = 100 does.
+    let out = fixture.execute(
+        &files,
+        &StreamSounds,
+        "seconds = 10.0\nmax_pcm_bytes = 100",
+        Scope::all(),
+        &[],
+    );
+    let sj = std::str::from_utf8(bytes(&out, "assets/fx/sounds.json")).unwrap();
+    assert!(sj.contains(r#""stream":true"#), "{sj}");
+}
+
+#[test]
+fn ogg_transcode_min_quality_searches_down_to_perceptual_threshold() {
+    let mut files = sounds(r#"{"a":{"sounds":["fx:hi"]}}"#);
+    // Encode a high-bitrate Ogg (q=9) so transcoding has plenty of room to shrink.
+    let pcm = packprune_codec::audio::decode(SHORT).unwrap();
+    let high = packprune_codec::audio::encode(&pcm, 0.9).unwrap();
+    files.insert("assets/fx/sounds/hi.ogg".into(), high);
+    let fixture = Fixture::new();
+    let fixed = fixture.execute(
+        &files,
+        &super::transcode::Audio::Ogg,
+        "quality = 6.0\nmax_lsd = 5.0",
+        Scope::all(),
+        &[],
+    );
+    let searched = fixture.execute(
+        &files,
+        &super::transcode::Audio::Ogg,
+        "quality = 6.0\nmin_quality = 0.0\nmax_lsd = 5.0",
+        Scope::all(),
+        &[],
+    );
+    let fixed_len = bytes(&fixed, "assets/fx/sounds/hi.ogg").len();
+    let searched_len = bytes(&searched, "assets/fx/sounds/hi.ogg").len();
+    assert!(
+        searched_len < fixed_len,
+        "expected perceptual search ({searched_len} B) to beat fixed quality ({fixed_len} B)"
+    );
 }

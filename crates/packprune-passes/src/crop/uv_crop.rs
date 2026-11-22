@@ -8,9 +8,10 @@ use packprune_graph::Names;
 use packprune_pack::json::{self, Node, TokenKind};
 use packprune_pack::{FileKind, Interner, LogicalPath, PhysPath, ResourceId, View};
 use packprune_pass::{Edits, Loss, Pass, PassCx, PassError, Stage};
-use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
+use rayon::iter::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator};
 
 use super::crop_box::{Axis, CropBox, Span};
+use super::repack;
 use crate::textures::{Views, file, no_options};
 
 /// `ModelManager`: a model face looks in the items atlas, then the blocks atlas.
@@ -73,7 +74,47 @@ impl Pass for UvCrop {
         let views = Views::new(cx, self.name())?;
         let mut run = Run::new(cx, &views, self.particles);
         run.collect();
-        run.crop(self.name())
+        run.crop(self.name(), false)
+    }
+}
+
+/// Packs disjoint model-face UV islands of static textures into a strictly smaller power-of-two (mip-aligned) canvas,
+/// remapping each face's UVs with exact f32 roundtrip under the oracle's quantization. Targets Blockbench / multi-part
+/// textures whose islands sit in separate corners so a single bounding-box crop cannot shrink them.
+pub(crate) struct UvRepack {
+    pub particles: bool,
+}
+
+impl Pass for UvRepack {
+    fn name(&self) -> &'static str {
+        if self.particles {
+            "uv-repack-particles"
+        } else {
+            "uv-repack"
+        }
+    }
+
+    fn stage(&self) -> Stage {
+        Stage::Textures
+    }
+
+    fn loss(&self) -> Loss {
+        if self.particles {
+            Loss::Lossy
+        } else {
+            Loss::Lossless
+        }
+    }
+
+    fn options_schema(&self) -> schemars::Schema {
+        no_options()
+    }
+
+    fn run(&self, cx: &PassCx<'_>) -> Result<Edits, PassError> {
+        let views = Views::new(cx, self.name())?;
+        let mut run = Run::new(cx, &views, self.particles);
+        run.collect();
+        run.crop(self.name(), true)
     }
 }
 
@@ -279,9 +320,10 @@ impl<'a> Run<'a> {
     }
 
     fn collect(&mut self) {
-        // Each model file's JSON and UV numbers are read once, in parallel: the views below only look them up.
+        // Each model file's JSON is read once, in parallel: the views below only look it up.
+        // UV number token maps are computed lazily below only for models whose textures survive the `whole` checks.
         let cx = self.cx;
-        let read: Vec<(PhysPath, Option<Arc<Node>>, UvNumbers)> = cx
+        let read: Vec<(PhysPath, Option<Arc<Node>>)> = cx
             .layout
             .kinds
             .par_iter()
@@ -289,12 +331,11 @@ impl<'a> Run<'a> {
             .filter_map(|(path, _)| {
                 let blob = &cx.pack.files.get(path)?.blob;
                 let json = json::parse(blob).ok().map(Arc::new);
-                Some((path.clone(), json, uv_numbers(blob)))
+                Some((path.clone(), json))
             })
             .collect();
-        for (path, json, numbers) in read {
-            self.json.insert(path.clone(), json);
-            self.numbers.insert(path, numbers);
+        for (path, json) in read {
+            self.json.insert(path, json);
         }
         for reference in self.cx.index.all().values().flatten() {
             match &reference.names {
@@ -356,6 +397,42 @@ impl<'a> Run<'a> {
                 texture.whole("its .mcmeta differs between views");
             } else if !texture.metas.contains("") && meta_users[texture.meta()] > 1 {
                 texture.whole("its .mcmeta serves another texture file too");
+            }
+        }
+        // Parse UV number tokens in parallel only for models referenced by textures that are not already marked whole.
+        let needed_models: BTreeSet<PhysPath> = self
+            .textures
+            .iter()
+            .filter(|t| t.whole.is_none())
+            .flat_map(|t| t.faces.iter())
+            .map(|&face| self.faces[face as usize].face.model.clone())
+            .collect();
+        if !needed_models.is_empty() {
+            let cx = self.cx;
+            let parsed_numbers: Vec<(PhysPath, UvNumbers)> = needed_models
+                .into_iter()
+                .collect::<Vec<_>>()
+                .into_par_iter()
+                .map(|model| {
+                    let nums = uv_numbers(&cx.pack.files[&model].blob);
+                    (model, nums)
+                })
+                .collect();
+            for (model, nums) in parsed_numbers {
+                self.numbers.insert(model, nums);
+            }
+            for tex_idx in 0..self.textures.len() {
+                if self.textures[tex_idx].whole.is_some() {
+                    continue;
+                }
+                let faces = self.textures[tex_idx].faces.clone();
+                for face in faces {
+                    if !self.has_uvs(face) {
+                        self.textures[tex_idx]
+                            .whole("a face whose four UVs are not written as numbers");
+                        break;
+                    }
+                }
             }
         }
         // A face whose UVs serve several textures, or one this pass leaves whole, keeps its UVs: so do they all.
@@ -812,7 +889,6 @@ impl<'a> Run<'a> {
         for texture in named.iter().flat_map(|named| &named.textures) {
             self.target(face, texture.unwrap_or(ELSEWHERE));
         }
-        let uvs = self.has_uvs(face);
         let Self {
             faces, textures, ..
         } = self;
@@ -823,9 +899,6 @@ impl<'a> Run<'a> {
             let texture = &mut textures[target as usize];
             if texture.sampled.insert(face) {
                 texture.faces.push(face);
-            }
-            if !uvs {
-                texture.whole("a face whose four UVs are not written as numbers");
             }
         }
     }
@@ -868,7 +941,7 @@ impl<'a> Run<'a> {
         (array.size() == 4).then_some(uvs)
     }
 
-    fn crop(mut self, pass: &'static str) -> Result<Edits, PassError> {
+    fn crop(mut self, pass: &'static str, do_repack: bool) -> Result<Edits, PassError> {
         let mut edits = Edits::default();
         let mut rewritten: BTreeMap<PhysPath, BTreeMap<String, String>> = BTreeMap::new();
         let mut left_whole: BTreeMap<String, usize> = BTreeMap::new();
@@ -882,51 +955,83 @@ impl<'a> Run<'a> {
                 .physical
                 .cmp(&self.textures[*b as usize].physical)
         });
+        enum Prepared {
+            Skip,
+            Whole(String),
+            Ready(Job),
+        }
+        let mut prepared = Vec::with_capacity(order.len());
         for id in order {
             let texture = &self.textures[id as usize];
-            let physical = texture.physical.clone();
             if texture.faces.is_empty() {
+                prepared.push((id, Prepared::Skip));
                 continue;
             }
             if let Some(reason) = &texture.whole {
-                *left_whole.entry(reason.clone()).or_default() += 1;
+                prepared.push((id, Prepared::Whole(reason.clone())));
                 continue;
             }
-            match self.crop_one(id, pass)? {
-                Outcome::Cropped {
-                    png,
-                    meta,
-                    uvs,
-                    before: texels_before,
-                    after: texels_after,
-                } => {
-                    edits.replaced.insert(physical.clone(), png.into());
-                    if let Some((path, bytes)) = meta {
-                        edits.replaced.insert(path, bytes.into());
-                    }
-                    for (face, values) in uvs {
-                        let face = &self.faces[face as usize].face;
-                        let model = rewritten.entry(face.model.clone()).or_default();
-                        for (i, value) in values.into_iter().enumerate() {
-                            model.insert(face.uv(i), value);
-                        }
-                    }
-                    before += texels_before;
-                    after += texels_after;
-                    cropped += 1;
-                    if self.textures[id as usize].particle {
-                        particle_before += texels_before;
-                        particle_after += texels_after;
-                        particle_cropped += 1;
-                    }
+            match self.prepare_one(id, pass, do_repack)? {
+                Ok(job) => prepared.push((id, Prepared::Ready(job))),
+                Err(outcome) => prepared.push((id, Prepared::Ready(Job::Immediate(outcome)))),
+            }
+        }
+        let cx = self.cx;
+        let outcomes: Vec<(TextureId, Result<Outcome, PassError>)> = prepared
+            .par_iter()
+            .filter_map(|(id, item)| match item {
+                Prepared::Ready(job) => Some((*id, job.execute(cx, pass))),
+                _ => None,
+            })
+            .collect();
+        let mut outcome_iter = outcomes.into_iter();
+        for (id, item) in prepared {
+            match item {
+                Prepared::Skip => {}
+                Prepared::Whole(reason) => {
+                    *left_whole.entry(reason).or_default() += 1;
                 }
-                Outcome::Left {
-                    reason,
-                    inexact: no_exact,
-                } => {
-                    *left_whole.entry(reason.into()).or_default() += 1;
-                    if no_exact {
-                        inexact.push(self.textures[id as usize].logical.clone());
+                Prepared::Ready(_) => {
+                    let (oid, outcome) = outcome_iter.next().expect("aligned outcome");
+                    debug_assert_eq!(oid, id);
+                    let physical = self.textures[id as usize].physical.clone();
+                    match outcome? {
+                        Outcome::Cropped {
+                            png,
+                            meta,
+                            uvs,
+                            before: texels_before,
+                            after: texels_after,
+                        } => {
+                            edits.replaced.insert(physical, png.into());
+                            if let Some((path, bytes)) = meta {
+                                edits.replaced.insert(path, bytes.into());
+                            }
+                            for (face, values) in uvs {
+                                let face = &self.faces[face as usize].face;
+                                let model = rewritten.entry(face.model.clone()).or_default();
+                                for (i, value) in values.into_iter().enumerate() {
+                                    model.insert(face.uv(i), value);
+                                }
+                            }
+                            before += texels_before;
+                            after += texels_after;
+                            cropped += 1;
+                            if self.textures[id as usize].particle {
+                                particle_before += texels_before;
+                                particle_after += texels_after;
+                                particle_cropped += 1;
+                            }
+                        }
+                        Outcome::Left {
+                            reason,
+                            inexact: no_exact,
+                        } => {
+                            *left_whole.entry(reason.into()).or_default() += 1;
+                            if no_exact {
+                                inexact.push(self.textures[id as usize].logical.clone());
+                            }
+                        }
                     }
                 }
             }
@@ -950,12 +1055,13 @@ impl<'a> Run<'a> {
                 one_decimal(100.0 * (before - after) as f64 / before as f64)
             )
         };
+        let verb = if do_repack { "repacked" } else { "cropped" };
         edits.changes.push(format!(
-            "{cropped} textures cropped, {before} -> {after} texels{share}"
+            "{cropped} textures {verb}, {before} -> {after} texels{share}"
         ));
         if self.particles {
             edits.changes.push(format!(
-                "{particle_cropped} particle sprites cropped, {particle_before} -> {particle_after} texels: their particles show only the texels the faces sample"
+                "{particle_cropped} particle sprites {verb}, {particle_before} -> {particle_after} texels: their particles show only the texels the faces sample"
             ));
         }
         edits.changes.push(format!("{models} models' UVs rescaled"));
@@ -980,12 +1086,17 @@ impl<'a> Run<'a> {
         Ok(edits)
     }
 
-    fn crop_one(&mut self, id: TextureId, pass: &'static str) -> Result<Outcome, PassError> {
+    fn prepare_one(
+        &mut self,
+        id: TextureId,
+        pass: &'static str,
+        do_repack: bool,
+    ) -> Result<Result<Job, Outcome>, PassError> {
         let cx = self.cx;
         let texture = &self.textures[id as usize];
-        let physical = &texture.physical.clone();
-        let Ok(image) = png::decode(&cx.pack.files[physical].blob) else {
-            return Ok(left("not a PNG the client reads"));
+        let physical = texture.physical.clone();
+        let Some((width, height)) = png_header_size(&cx.pack.files[&physical].blob) else {
+            return Ok(Err(left("not a PNG the client reads")));
         };
         let (align, faces) = (texture.align, texture.faces.clone());
         let meta_path = texture.meta().to_owned();
@@ -995,7 +1106,7 @@ impl<'a> Run<'a> {
                 let parses = json::parses(&cx.pack.files[path].blob);
                 match self.json(path).cloned() {
                     Some(meta) if parses => Some(meta),
-                    _ => return Ok(left("an unreadable .mcmeta")),
+                    _ => return Ok(Err(left("an unreadable .mcmeta"))),
                 }
             }
             None => None,
@@ -1004,18 +1115,20 @@ impl<'a> Run<'a> {
             .as_ref()
             .is_some_and(|meta| meta.path("texture").path("blur").as_bool(false))
         {
-            return Ok(left("blurred, so sampled across the crop edge"));
+            return Ok(Err(left("blurred, so sampled across the crop edge")));
         }
         // AnimationMetadataSection: frames on a grid of the frame size, square and as small as the image when unset.
         let animation = meta.as_ref().map(|meta| meta.path("animation"));
         let animated = animation.is_some_and(Node::is_object);
+        if do_repack && animated {
+            return Ok(Err(left("an animated texture")));
+        }
         let explicit = |name| {
             animation
                 .filter(|_| animated)
                 .map_or(0, |animation| animation.path(name).as_int(0))
         };
         let (explicit_width, explicit_height) = (explicit("width"), explicit("height"));
-        let (width, height) = (image.width as i32, image.height as i32);
         let (frame_width, frame_height) = if animated && (explicit_width > 0 || explicit_height > 0)
         {
             (
@@ -1036,8 +1149,9 @@ impl<'a> Run<'a> {
             (width, height)
         };
         if width % frame_width != 0 || height % frame_height != 0 {
-            return Ok(left("frames that do not tile the image"));
+            return Ok(Err(left("frames that do not tile the image")));
         }
+        let mut check_opaque_mip = false;
         if align > 1 {
             // MipmapGenerator: only the mean strategy builds each mip texel from the 2x2 block under it alone. AUTO is
             // mean unless the whole image has a transparent texel; cutout ones read the whole image (solidify, alpha
@@ -1048,13 +1162,17 @@ impl<'a> Run<'a> {
                     .as_string("auto")
                     .into_owned()
             });
-            if strategy != "mean" && !(strategy == "auto" && !transparent(&image)) {
-                return Ok(left("a cutout mipmap strategy on a mipmapped atlas"));
+            if strategy != "mean" {
+                if strategy == "auto" {
+                    check_opaque_mip = true;
+                } else {
+                    return Ok(Err(left("a cutout mipmap strategy on a mipmapped atlas")));
+                }
             }
             if (width > frame_width && frame_width % align != 0)
                 || (height > frame_height && frame_height % align != 0)
             {
-                return Ok(left("frames off the mip block of a mipmapped atlas"));
+                return Ok(Err(left("frames off the mip block of a mipmapped atlas")));
             }
         }
         let mut values = Vec::with_capacity(faces.len());
@@ -1064,11 +1182,15 @@ impl<'a> Run<'a> {
             let mut floats = [0f32; 4];
             for (i, text) in written.iter().enumerate() {
                 let (Ok(float), Ok(double)) = (text.parse::<f32>(), text.parse::<f64>()) else {
-                    return Ok(left("a UV read differently as a float and as a double"));
+                    return Ok(Err(left(
+                        "a UV read differently as a float and as a double",
+                    )));
                 };
                 // The oracle reads the double and narrows it; a value both do not read alike is left alone.
                 if double as f32 != float || !float.is_finite() {
-                    return Ok(left("a UV read differently as a float and as a double"));
+                    return Ok(Err(left(
+                        "a UV read differently as a float and as a double",
+                    )));
                 }
                 floats[i] = float;
             }
@@ -1082,11 +1204,40 @@ impl<'a> Run<'a> {
             });
             values.push((face, floats));
         }
+
+        if do_repack {
+            let floats_only: Vec<[f32; 4]> = values.iter().map(|&(_, f)| f).collect();
+            let Some(plan) = repack::plan(width, height, &floats_only, align) else {
+                return Ok(Err(left("no smaller exact island packing")));
+            };
+            let scope = cx.scope;
+            if !scope.contains(&physical)
+                || !faces
+                    .iter()
+                    .all(|&face| scope.contains(&self.faces[face as usize].face.model))
+            {
+                return Ok(Err(left("a file outside the pass's lossy globs")));
+            }
+            let uvs: Vec<(FaceId, [String; 4])> = values
+                .iter()
+                .zip(&plan.uvs)
+                .map(|(&(face, _), new_uv)| (face, new_uv.map(text)))
+                .collect();
+            return Ok(Ok(Job::Repack {
+                physical,
+                width,
+                height,
+                check_opaque_mip,
+                plan,
+                uvs,
+            }));
+        }
+
         let (Some(x_axis), Some(y_axis)) = (
             CropBox::axis(&xs, frame_width),
             CropBox::axis(&ys, frame_height),
         ) else {
-            return Ok(left("a face that samples outside its frame"));
+            return Ok(Err(left("a face that samples outside its frame")));
         };
         let mut x = CropBox {
             start: 0,
@@ -1108,7 +1259,7 @@ impl<'a> Run<'a> {
         if x.size == frame_width && y.size == frame_height {
             let tight =
                 x_axis.high - x_axis.low == frame_width && y_axis.high - y_axis.low == frame_height;
-            return Ok(if tight {
+            return Ok(Err(if tight {
                 left("already the texels its faces sample")
             } else if align > 1 {
                 left("no exact crop on the mip block of a mipmapped atlas")
@@ -1117,16 +1268,11 @@ impl<'a> Run<'a> {
                     reason: "no exact crop",
                     inexact: true,
                 }
-            });
+            }));
         }
-        let columns = width / frame_width;
-        let rows = height / frame_height;
-        let Some(png) = crop_frames(&image, columns, rows, frame_width, frame_height, x, y) else {
-            return Ok(left("not a PNG the encoder writes"));
-        };
         let explicit_size = explicit_width > 0 || explicit_height > 0;
         let scope = cx.scope;
-        if !scope.contains(physical)
+        if !scope.contains(&physical)
             || !faces
                 .iter()
                 .all(|&face| scope.contains(&self.faces[face as usize].face.model))
@@ -1135,7 +1281,7 @@ impl<'a> Run<'a> {
                     .as_ref()
                     .is_some_and(|meta| scope.contains(meta)))
         {
-            return Ok(left("a file outside the pass's lossy globs"));
+            return Ok(Err(left("a file outside the pass's lossy globs")));
         }
         let meta_edit = match &meta_physical {
             Some(path) if explicit_size => {
@@ -1174,14 +1320,126 @@ impl<'a> Run<'a> {
             }
             uvs.push((face, written));
         }
-        Ok(Outcome::Cropped {
-            png,
-            meta: meta_edit,
+        Ok(Ok(Job::Crop {
+            physical,
+            width,
+            height,
+            frame_width,
+            frame_height,
+            x,
+            y,
+            check_opaque_mip,
+            meta_edit,
             uvs,
-            before: width as u64 * height as u64,
-            after: (columns * x.size) as u64 * (rows * y.size) as u64,
-        })
+        }))
     }
+}
+
+enum Job {
+    Immediate(Outcome),
+    Crop {
+        physical: PhysPath,
+        width: i32,
+        height: i32,
+        frame_width: i32,
+        frame_height: i32,
+        x: CropBox,
+        y: CropBox,
+        check_opaque_mip: bool,
+        meta_edit: Option<(PhysPath, Vec<u8>)>,
+        uvs: Vec<(FaceId, [String; 4])>,
+    },
+    Repack {
+        physical: PhysPath,
+        width: i32,
+        height: i32,
+        check_opaque_mip: bool,
+        plan: repack::Plan,
+        uvs: Vec<(FaceId, [String; 4])>,
+    },
+}
+
+impl Job {
+    fn execute(&self, cx: &PassCx<'_>, _pass: &'static str) -> Result<Outcome, PassError> {
+        match self {
+            Job::Immediate(outcome) => Ok(match outcome {
+                Outcome::Left { reason, inexact } => Outcome::Left {
+                    reason,
+                    inexact: *inexact,
+                },
+                Outcome::Cropped { .. } => unreachable!(),
+            }),
+            Job::Crop {
+                physical,
+                width,
+                height,
+                frame_width,
+                frame_height,
+                x,
+                y,
+                check_opaque_mip,
+                meta_edit,
+                uvs,
+            } => {
+                let Ok(image) = png::decode(&cx.pack.files[physical].blob) else {
+                    return Ok(left("not a PNG the client reads"));
+                };
+                if *check_opaque_mip && transparent(&image) {
+                    return Ok(left("a cutout mipmap strategy on a mipmapped atlas"));
+                }
+                let columns = *width / *frame_width;
+                let rows = *height / *frame_height;
+                let Some(png) =
+                    crop_frames(&image, columns, rows, *frame_width, *frame_height, *x, *y)
+                else {
+                    return Ok(left("not a PNG the encoder writes"));
+                };
+                Ok(Outcome::Cropped {
+                    png,
+                    meta: meta_edit.clone(),
+                    uvs: uvs.clone(),
+                    before: *width as u64 * *height as u64,
+                    after: (columns * x.size) as u64 * (rows * y.size) as u64,
+                })
+            }
+            Job::Repack {
+                physical,
+                width,
+                height,
+                check_opaque_mip,
+                plan,
+                uvs,
+            } => {
+                let Ok(image) = png::decode(&cx.pack.files[physical].blob) else {
+                    return Ok(left("not a PNG the client reads"));
+                };
+                if *check_opaque_mip && transparent(&image) {
+                    return Ok(left("a cutout mipmap strategy on a mipmapped atlas"));
+                }
+                let repacked = plan.apply(&image);
+                let Ok(png) = png::encode(&repacked) else {
+                    return Ok(left("not a PNG the encoder writes"));
+                };
+                Ok(Outcome::Cropped {
+                    png,
+                    meta: None,
+                    uvs: uvs.clone(),
+                    before: *width as u64 * *height as u64,
+                    after: plan.width as u64 * plan.height as u64,
+                })
+            }
+        }
+    }
+}
+
+/// Reads positive `(width, height)` from a PNG's 24-byte IHDR header without inflating IDAT.
+fn png_header_size(bytes: &[u8]) -> Option<(i32, i32)> {
+    if bytes.len() < 24 || &bytes[..8] != b"\x89PNG\r\n\x1a\n" || &bytes[12..16] != b"IHDR" {
+        return None;
+    }
+    let width = i32::from_be_bytes(bytes[16..20].try_into().ok()?);
+    let height = i32::from_be_bytes(bytes[20..24].try_into().ok()?);
+    (width > 0 && height > 0).then_some((width, height))
 }
 
 /// Every number token's text by pointer that a UV lookup can ask for, `None` when the file does not tokenize.

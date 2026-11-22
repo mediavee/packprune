@@ -361,15 +361,32 @@ fn the_two_passes_together_are_the_same_for_the_player() {
 /// escaped.
 #[test]
 fn rewritten_metadata_is_written_compact_with_members_in_place() {
-    let meta = r#"{"animation": {"frametime": 2, "frames": [0, 1, 0]}, "x": "a/b\u001fé\n", "y": 12345678901, "z": 1e2}"#;
-    let strip = strip(1, &[0xFF00_0000, 0xFF00_0000]);
+    let meta = r#"{"animation": {"frametime": 2, "frames": [0, 1, 2]}, "x": "a/b\u001fé\n", "y": 12345678901, "z": 1e2}"#;
+    let strip = strip(1, &[0xFF00_0000, 0xFF00_FF00, 0xFF00_0000]);
 
     let out = super::animation::dedupe(&strip, meta.as_bytes()).unwrap();
+    let super::animation::MetaAction::Replace(bytes) = out.meta_action else {
+        panic!("expected replaced metadata");
+    };
 
     assert_eq!(
-        String::from_utf8(out.meta).unwrap(),
-        "{\"animation\":{\"frametime\":2,\"frames\":[0,0,0]},\"x\":\"a/b\\u001F\u{e9}\\n\",\"y\":12345678901,\"z\":100.0}"
+        String::from_utf8(bytes).unwrap(),
+        "{\"animation\":{\"frametime\":2,\"frames\":[0,1,0]},\"x\":\"a/b\\u001F\u{e9}\\n\",\"y\":12345678901,\"z\":100.0}"
     );
+}
+
+#[test]
+fn static_animation_collapses_and_removes_empty_mcmeta() {
+    let fx = Fixture::new();
+    let files = animated(
+        r#"{"animation":{"frametime":4}}"#,
+        strip(4, &[0xFFFF_0000, 0xFFFF_0000, 0xFFFF_0000]),
+    );
+
+    let ran = fx.same(&files, &[], &AnimationFrames);
+    assert!(!ran.out.contains_key(&format!("{}.mcmeta", texture("a"))));
+    let img = decode(&ran.out[&texture("a")]);
+    assert_eq!((img.width, img.height), (4, 4));
 }
 
 /// A member the animation does not read may hold a number that overflows a double: it is written back as the string

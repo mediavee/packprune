@@ -24,6 +24,7 @@ impl Faces {
 
 pub(super) struct Uses {
     pub candidates: BTreeMap<PhysPath, Faces>,
+    pub mipmapped: BTreeSet<PhysPath>,
     pub skipped: BTreeMap<PhysPath, String>,
 }
 
@@ -68,6 +69,7 @@ impl Uses {
             }
         }
         let mut faces = BTreeMap::<PhysPath, Faces>::new();
+        let mut mipmapped = BTreeSet::<PhysPath>::new();
         for view in &cx.layout.views {
             let mut named = BTreeMap::<ResourceId, Faces>::new();
             let mut undrawn = BTreeSet::new();
@@ -125,6 +127,9 @@ impl Uses {
                         {
                             blocked.entry(logical).or_insert_with(|| "animated".into());
                         } else {
+                            if atlas == "minecraft:blocks" {
+                                mipmapped.insert(physical.clone());
+                            }
                             faces
                                 .entry(physical.clone())
                                 .and_modify(|old| *old = old.min(*density))
@@ -156,6 +161,7 @@ impl Uses {
         }
         let mut result = Self {
             candidates: BTreeMap::new(),
+            mipmapped,
             skipped: BTreeMap::new(),
         };
         for (physical, density) in faces {

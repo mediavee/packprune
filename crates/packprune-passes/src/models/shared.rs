@@ -3,6 +3,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use packprune_pack::json;
 use packprune_pack::{LogicalPath, PhysPath};
 use packprune_pass::{Edits, Loss, Pass, PassCx, PassError, Stage};
+use rayon::prelude::*;
 use sha2::{Digest, Sha256};
 
 use super::{identical::key, models, text};
@@ -103,13 +104,20 @@ impl Pass for SharedDisplay {
                 edits.added.insert(path, file.into_bytes().into());
                 parents += 1;
             }
-            for model in &takers {
-                let bytes = text::edit(
-                    &cx.pack.files[model.physical].blob,
-                    &BTreeSet::from(["/display".into()]),
-                    Some(("parent", &parent)),
-                );
-                edits.replaced.insert(model.physical.clone(), bytes.into());
+            let drop_display = BTreeSet::from(["/display".to_owned()]);
+            let rewritten: Vec<(PhysPath, Vec<u8>)> = takers
+                .par_iter()
+                .map(|model| {
+                    let bytes = text::edit(
+                        &cx.pack.files[model.physical].blob,
+                        &drop_display,
+                        Some(("parent", &parent)),
+                    );
+                    (model.physical.clone(), bytes)
+                })
+                .collect();
+            for (physical, bytes) in rewritten {
+                edits.replaced.insert(physical, bytes.into());
             }
             children += takers.len();
         }

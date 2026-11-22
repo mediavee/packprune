@@ -68,16 +68,19 @@ A file that misses its threshold stays as it was, and the report lists it.
 |---|---|---|
 | `png-quantize` | reduces PNG colours to a palette | `max_colors` (256), `quality` (100), `dithering` (1), `effort` (15) |
 | `png-alpha` | rewrites the colour of fully transparent pixels | `effort` (15) |
-| `png-single-color` | downsizes single-colour textures | `effort` (15) |
+| `png-single-color` | downsizes single-colour textures and exact `k×k` nearest-neighbor pixel-art upscales | `effort` (15) |
+| `atlas-budget` | simulates atlas stitching and downscales oversized sprites to drop GPU VRAM power-of-two tiers | `max_atlas_bytes` (optional), `max_factor` (4), `min_dim` (16), `min_ssim`, `max_delta` |
+| `font-downscale` | downscales oversized bitmap font sheets to pack multiple glyphs per 256×256 GPU page | `max_oversample` (2.0), `min_ssim`, `max_delta` |
 | `texel-downscale` | downscales textures denser than `ceiling` texels per model unit | `ceiling` (4) |
 | `uv-crop-particles` | also crops model particle sprites | none |
+| `uv-repack-particles` | also repacks disjoint UV islands of model particle sprites | none |
 | `prune-unnamed-sprites` | removes unnamed single-atlas sprites | none |
 | `overlay-floor` | removes overlays older than a format | `oldest_format` (required) |
-| `ogg-transcode` | re-encodes Ogg Vorbis, kept only when smaller | `quality` (0.6) |
-| `sound-mono` | downmixes stereo sounds to mono | `quality` (0.6) |
-| `sound-rate` | resamples sounds above `cap` Hz | `cap` (48000), `quality` (0.6) |
-| `audio-to-ogg` | converts MP3, AAC, FLAC and WAV sounds to Ogg | `quality` (0.6) |
-| `stream-sounds` | marks sounds longer than `seconds` as streamed | `seconds` (5) |
+| `ogg-transcode` | re-encodes Ogg Vorbis, kept only when smaller | `quality` (0.6), `min_quality` (optional perceptual search floor) |
+| `sound-mono` | downmixes stereo sounds to mono | `quality` (0.6), `min_quality` (optional) |
+| `sound-rate` | resamples sounds above `cap` Hz | `cap` (48000), `quality` (0.6), `min_quality` (optional) |
+| `audio-to-ogg` | converts MP3, AAC, FLAC and WAV sounds to Ogg | `quality` (0.6), `min_quality` (optional) |
+| `stream-sounds` | marks sounds longer than `seconds` (or exceeding `max_pcm_bytes`) as streamed | `seconds` (5), `max_pcm_bytes` (optional) |
 
 Quality thresholds, all optional:
 

@@ -1,5 +1,6 @@
 use packprune_pass::Pass;
 
+mod identical;
 mod ogg;
 mod stream;
 mod targets;
@@ -12,6 +13,7 @@ mod tests;
 
 pub fn passes() -> Vec<Box<dyn Pass>> {
     vec![
+        Box::new(identical::IdenticalSounds),
         Box::new(stream::StreamSounds),
         Box::new(transcode::Audio::Mono),
         Box::new(transcode::Audio::Rate),

@@ -453,3 +453,54 @@ fn framework_orders_short_names_before_atlas_directory() {
         ["short-names", "atlas-directory"]
     );
 }
+
+#[test]
+fn short_names_mode_all_renames_long_custom_paths_and_preserves_item_prefix() {
+    let fixture = Fixture::new();
+    let mut pack = files();
+    let png = Arc::clone(&pack.files[&phys(&texture(A))].blob);
+    let long_tex = "assets/custom/textures/item/very_long_custom_weapon_texture.png";
+    let long_model = "assets/custom/models/item/very_long_custom_weapon_model.json";
+    put(&mut pack, long_tex, &png);
+    put(
+        &mut pack,
+        long_model,
+        br#"{"textures":{"layer0":"custom:item/very_long_custom_weapon_texture"}}"#,
+    );
+    put(
+        &mut pack,
+        "assets/custom/items/weapon.json",
+        br#"{"model":{"type":"minecraft:model","model":"custom:item/very_long_custom_weapon_model"}}"#,
+    );
+    put(
+        &mut pack,
+        "assets/minecraft/atlases/items.json",
+        br#"{"sources":[{"type":"single","resource":"custom:item/very_long_custom_weapon_texture"}]}"#,
+    );
+    let options: toml::Table = toml::from_str(r#"mode = "all""#).unwrap();
+    let state = fixture.cx().analyse(pack).unwrap();
+    let result = packprune_pass::run(
+        &fixture.cx(),
+        &Kept::default(),
+        &state,
+        &[packprune_pass::Enabled {
+            pass: &ShortNames,
+            options,
+            scope: packprune_pass::Scope::all(),
+        }],
+    )
+    .unwrap();
+    assert!(!result.state.pack.files.contains_key(&phys(long_tex)));
+    assert!(!result.state.pack.files.contains_key(&phys(long_model)));
+    // Must preserve the `item/` prefix on the renamed item sprite so solidify semantics stay intact.
+    assert!(
+        result
+            .state
+            .pack
+            .files
+            .keys()
+            .any(|p| p.as_str().contains("/textures/item/") && p.as_str().ends_with(".png")),
+        "expected renamed item texture to keep item/ prefix: {:?}",
+        result.state.pack.files.keys().collect::<Vec<_>>()
+    );
+}

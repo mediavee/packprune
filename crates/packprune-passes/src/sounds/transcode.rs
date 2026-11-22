@@ -1,7 +1,9 @@
+use std::cmp::Reverse;
+
 use packprune_codec::{CodecError, audio, metrics};
 use packprune_pack::{Entry, PhysPath, kinds::ResourcePath};
 use packprune_pass::{Edits, Loss, LossRecord, Pass, PassCx, PassError, Stage};
-use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
+use rayon::prelude::*;
 use schemars::JsonSchema;
 use serde::Deserialize;
 use serde::de::DeserializeOwned;
@@ -20,9 +22,11 @@ pub(super) enum Audio {
 #[derive(Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 struct MonoOptions {
-    /// Vorbis quality, from -2 to 10.
+    /// Vorbis quality, from -2 to 10 (or upper bound when `min_quality` is set).
     #[serde(default = "quality")]
     quality: f32,
+    /// Optional lower bound for perceptual quality search when `max_lsd` or `min_snr` is set.
+    min_quality: Option<f32>,
     max_lsd: Option<f64>,
     min_snr: Option<f64>,
 }
@@ -30,9 +34,11 @@ struct MonoOptions {
 #[derive(Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 struct RateOptions {
-    /// Vorbis quality, from -2 to 10.
+    /// Vorbis quality, from -2 to 10 (or upper bound when `min_quality` is set).
     #[serde(default = "quality")]
     quality: f32,
+    /// Optional lower bound for perceptual quality search when `max_lsd` or `min_snr` is set.
+    min_quality: Option<f32>,
     #[serde(default = "cap")]
     cap: u32,
     max_lsd: Option<f64>,
@@ -42,9 +48,11 @@ struct RateOptions {
 #[derive(Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 struct OggOptions {
-    /// Vorbis quality, from -2 to 10.
+    /// Vorbis quality, from -2 to 10 (or upper bound when `min_quality` is set).
     #[serde(default = "quality")]
     quality: f32,
+    /// Optional lower bound for perceptual quality search when `max_lsd` or `min_snr` is set.
+    min_quality: Option<f32>,
     max_lsd: Option<f64>,
     min_snr: Option<f64>,
 }
@@ -52,9 +60,11 @@ struct OggOptions {
 #[derive(Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 struct ConvertOptions {
-    /// Vorbis quality, from -2 to 10.
+    /// Vorbis quality, from -2 to 10 (or upper bound when `min_quality` is set).
     #[serde(default = "quality")]
     quality: f32,
+    /// Optional lower bound for perceptual quality search when `max_lsd` or `min_snr` is set.
+    min_quality: Option<f32>,
     max_lsd: Option<f64>,
     min_snr: Option<f64>,
 }
@@ -77,6 +87,7 @@ fn read<T: DeserializeOwned>(options: &toml::Table) -> Result<T, String> {
 #[derive(Clone, Copy)]
 pub(super) struct Options {
     quality: f32,
+    min_quality: Option<f32>,
     cap: Option<u32>,
     max_lsd: Option<f64>,
     min_snr: Option<f64>,
@@ -98,6 +109,7 @@ impl Audio {
                 let o: MonoOptions = read(table)?;
                 Options {
                     quality: o.quality,
+                    min_quality: o.min_quality,
                     cap: None,
                     max_lsd: o.max_lsd,
                     min_snr: o.min_snr,
@@ -107,6 +119,7 @@ impl Audio {
                 let o: RateOptions = read(table)?;
                 Options {
                     quality: o.quality,
+                    min_quality: o.min_quality,
                     cap: Some(o.cap),
                     max_lsd: o.max_lsd,
                     min_snr: o.min_snr,
@@ -116,6 +129,7 @@ impl Audio {
                 let o: OggOptions = read(table)?;
                 Options {
                     quality: o.quality,
+                    min_quality: o.min_quality,
                     cap: None,
                     max_lsd: o.max_lsd,
                     min_snr: o.min_snr,
@@ -125,6 +139,7 @@ impl Audio {
                 let o: ConvertOptions = read(table)?;
                 Options {
                     quality: o.quality,
+                    min_quality: o.min_quality,
                     cap: None,
                     max_lsd: o.max_lsd,
                     min_snr: o.min_snr,
@@ -133,11 +148,14 @@ impl Audio {
         };
         if !options.quality.is_finite()
             || !(-2.0..=10.0).contains(&options.quality)
+            || options.min_quality.is_some_and(|v| {
+                !v.is_finite() || !(-2.0..=10.0).contains(&v) || v > options.quality
+            })
             || options.cap == Some(0)
             || options.max_lsd.is_some_and(|v| !v.is_finite() || v < 0.0)
             || options.min_snr.is_some_and(|v| !v.is_finite())
         {
-            return Err("quality must be in [-2, 10], cap positive, and loss thresholds finite (max_lsd non-negative)".into());
+            return Err("quality/min_quality must be in [-2, 10] with min_quality <= quality, cap positive, and loss thresholds finite (max_lsd non-negative)".into());
         }
         Ok(options)
     }
@@ -263,6 +281,13 @@ pub(super) fn transcode(
         let mut options = first.options;
         for selection in selected.iter().skip(1) {
             options.quality = options.quality.max(selection.options.quality);
+            options.min_quality = match (options.min_quality, selection.options.min_quality) {
+                (Some(a), Some(b)) => Some(a.max(b)),
+                (Some(a), None) => Some(a),
+                (None, Some(b)) => Some(b),
+                (None, None) => None,
+            }
+            .map(|v| v.min(options.quality));
             options.cap = options.cap.into_iter().chain(selection.options.cap).min();
             options.max_lsd = options
                 .max_lsd
@@ -300,15 +325,23 @@ pub(super) fn transcode(
         });
     }
 
-    // Each sound is decoded, encoded and measured on its own; the edits are then applied in path order, so the
-    // result does not depend on the thread count.
-    let outcomes: Vec<Option<Result<Outcome, PassError>>> = planned
-        .par_iter()
-        .map(|job| {
+    // Largest inputs first (LPT scheduling) so a long track never runs alone at the end; outcomes are put back into
+    // `planned` path order so the result does not depend on thread count or schedule.
+    let mut order: Vec<usize> = (0..planned.len()).collect();
+    order.sort_by_key(|&i| (Reverse(planned[i].entry.blob.len()), planned[i].path));
+    let mut indexed: Vec<(usize, Option<Result<Outcome, PassError>>)> = order
+        .into_iter()
+        .par_bridge()
+        .map(|i| {
+            let job = &planned[i];
             let collides = job.convert && cx.pack.files.contains_key(&job.destination);
-            (!collides && !job.refused).then(|| run(job, name))
+            let outcome = (!collides && !job.refused).then(|| run_cached(job, name, cx));
+            (i, outcome)
         })
         .collect();
+    indexed.sort_unstable_by_key(|(i, _)| *i);
+    let outcomes: Vec<Option<Result<Outcome, PassError>>> =
+        indexed.into_iter().map(|(_, outcome)| outcome).collect();
 
     let mut edits = Edits::default();
     for (job, outcome) in planned.into_iter().zip(outcomes) {
@@ -351,6 +384,139 @@ pub(super) fn transcode(
     Ok(edits)
 }
 
+fn run_cached(job: &Job<'_>, name: &'static str, cx: &PassCx<'_>) -> Result<Outcome, PassError> {
+    let key = cache_key(job);
+    if let Some(cached) = cx.cache.get("audio-transcode", &key)
+        && let Some(outcome) = decode_outcome(&cached, job.path)
+    {
+        return Ok(outcome);
+    }
+    let outcome = run(job, name)?;
+    cx.cache
+        .put("audio-transcode", &key, &encode_outcome(&outcome));
+    Ok(outcome)
+}
+
+fn cache_key(job: &Job<'_>) -> Vec<u8> {
+    let mut key = Vec::with_capacity(72);
+    key.extend_from_slice(&job.entry.digest.0);
+    key.push(u8::from(job.convert));
+    key.push(u8::from(job.mono));
+    key.extend_from_slice(&job.options.quality.to_bits().to_le_bytes());
+    match job.options.min_quality {
+        Some(v) => {
+            key.push(1);
+            key.extend_from_slice(&v.to_bits().to_le_bytes());
+        }
+        None => key.push(0),
+    }
+    match job.options.cap {
+        Some(cap) => {
+            key.push(1);
+            key.extend_from_slice(&cap.to_le_bytes());
+        }
+        None => key.push(0),
+    }
+    match job.options.max_lsd {
+        Some(v) => {
+            key.push(1);
+            key.extend_from_slice(&v.to_bits().to_le_bytes());
+        }
+        None => key.push(0),
+    }
+    match job.options.min_snr {
+        Some(v) => {
+            key.push(1);
+            key.extend_from_slice(&v.to_bits().to_le_bytes());
+        }
+        None => key.push(0),
+    }
+    key
+}
+
+fn put_bytes(out: &mut Vec<u8>, bytes: &[u8]) {
+    out.extend_from_slice(&(bytes.len() as u64).to_le_bytes());
+    out.extend_from_slice(bytes);
+}
+
+fn encode_outcome(outcome: &Outcome) -> Vec<u8> {
+    let mut out = Vec::new();
+    match outcome {
+        Outcome::Kept(why) => {
+            out.push(0);
+            // Strip the leading path prefix when present so duplicate sounds at different paths share cache entries.
+            put_bytes(&mut out, why.as_bytes());
+        }
+        Outcome::Transcoded {
+            output,
+            change,
+            loss,
+        } => {
+            out.push(1);
+            put_bytes(&mut out, output);
+            // Store only the suffix after `": "` so the path is filled in on load.
+            let suffix = change.split_once(": ").map_or(change.as_str(), |(_, s)| s);
+            put_bytes(&mut out, suffix.as_bytes());
+            out.extend_from_slice(&(loss.len() as u64).to_le_bytes());
+            for record in loss {
+                put_bytes(&mut out, record.metric.as_bytes());
+                out.extend_from_slice(&record.value.to_le_bytes());
+            }
+        }
+    }
+    out
+}
+
+fn take_slice<'a>(rest: &mut &'a [u8], n: usize) -> Option<&'a [u8]> {
+    let (head, tail) = rest.split_at_checked(n)?;
+    *rest = tail;
+    Some(head)
+}
+
+fn take_field<'a>(rest: &mut &'a [u8]) -> Option<&'a [u8]> {
+    let len = u64::from_le_bytes(take_slice(rest, 8)?.try_into().ok()?) as usize;
+    take_slice(rest, len)
+}
+
+fn decode_outcome(bytes: &[u8], path: &PhysPath) -> Option<Outcome> {
+    let mut rest = bytes;
+    match take_slice(&mut rest, 1)? {
+        [0] => {
+            let why = std::str::from_utf8(take_field(&mut rest)?).ok()?;
+            if !rest.is_empty() {
+                return None;
+            }
+            // Rewrite `"kept <old>: <reason>"` with this job's path if needed.
+            let rebuilt = match why.strip_prefix("kept ").and_then(|s| s.split_once(": ")) {
+                Some((_, reason)) => format!("kept {path}: {reason}"),
+                None => why.to_owned(),
+            };
+            Some(Outcome::Kept(rebuilt))
+        }
+        [1] => {
+            let output = take_field(&mut rest)?.to_vec();
+            let suffix = std::str::from_utf8(take_field(&mut rest)?).ok()?;
+            let count = u64::from_le_bytes(take_slice(&mut rest, 8)?.try_into().ok()?) as usize;
+            let mut loss = Vec::with_capacity(count);
+            for _ in 0..count {
+                let metric = std::str::from_utf8(take_field(&mut rest)?).ok()?.to_owned();
+                let value = f64::from_le_bytes(take_slice(&mut rest, 8)?.try_into().ok()?);
+                loss.push(LossRecord {
+                    key: path.to_string(),
+                    metric,
+                    value,
+                });
+            }
+            rest.is_empty().then(|| Outcome::Transcoded {
+                output,
+                change: format!("{path}: {suffix}"),
+                loss,
+            })
+        }
+        _ => None,
+    }
+}
+
 fn run(job: &Job<'_>, name: &'static str) -> Result<Outcome, PassError> {
     let Job {
         path,
@@ -378,27 +544,84 @@ fn run(job: &Job<'_>, name: &'static str) -> Result<Outcome, PassError> {
         None => Ok(pcm),
     })
     .map_err(failed)?;
-    let output = audio::encode(&transformed, options.quality / 10.0)
-        .and_then(|bytes| audio::optimise(&bytes))
-        .map_err(failed)?;
-    let after = audio::decode(&output).map_err(failed)?;
-    let loss = match metrics::sound_loss(&before, &after) {
-        Ok(loss) => loss,
-        Err(error) => {
+    type Candidate = (Vec<u8>, audio::Pcm, metrics::SoundLoss);
+    let encode_and_measure = |q: f32| -> Result<Result<Candidate, String>, PassError> {
+        let output = audio::encode(&transformed, q / 10.0)
+            .and_then(|bytes| audio::optimise(&bytes))
+            .map_err(failed)?;
+        let after = audio::decode(&output).map_err(failed)?;
+        let loss = match metrics::sound_loss(&before, &after) {
+            Ok(loss) => loss,
+            Err(error) => {
+                return Ok(Err(format!(
+                    "kept {path}: loss cannot be measured: {error}"
+                )));
+            }
+        };
+        Ok(Ok((output, after, loss)))
+    };
+    let passes_gate = |loss: &metrics::SoundLoss| -> bool {
+        !options.max_lsd.is_some_and(|limit| loss.lsd > limit)
+            && !options
+                .min_snr
+                .is_some_and(|limit| loss.snr.is_none_or(|snr| snr < limit))
+    };
+
+    let (output, after, loss) = if let Some(min_q) = options.min_quality
+        && min_q < options.quality
+        && (options.max_lsd.is_some() || options.min_snr.is_some())
+    {
+        // Perceptual quality search: test `min_q` first; if it passes, we're done with the smallest file!
+        // Otherwise binary-search `[min_q, options.quality]` (5 steps -> ~0.1–0.2 Vorbis quality granularity)
+        // to find the lowest Vorbis quality that meets `max_lsd` and `min_snr`.
+        let low_try = match encode_and_measure(min_q)? {
+            Ok(v) => v,
+            Err(msg) => return Ok(Outcome::Kept(msg)),
+        };
+        if passes_gate(&low_try.2) {
+            low_try
+        } else {
+            let high_try = match encode_and_measure(options.quality)? {
+                Ok(v) => v,
+                Err(msg) => return Ok(Outcome::Kept(msg)),
+            };
+            if !passes_gate(&high_try.2) {
+                return Ok(Outcome::Kept(format!(
+                    "kept {path}: measured loss exceeds threshold"
+                )));
+            }
+            let (mut lo, mut hi) = (min_q, options.quality);
+            let mut best = high_try;
+            for _ in 0..5 {
+                let mid = ((lo + hi) * 0.5 * 20.0).round() / 20.0;
+                if mid <= lo || mid >= hi {
+                    break;
+                }
+                match encode_and_measure(mid)? {
+                    Ok(cand) if passes_gate(&cand.2) => {
+                        if cand.0.len() < best.0.len() {
+                            best = cand;
+                        }
+                        hi = mid;
+                    }
+                    Ok(_) => lo = mid,
+                    Err(_) => lo = mid,
+                }
+            }
+            best
+        }
+    } else {
+        let single = match encode_and_measure(options.quality)? {
+            Ok(v) => v,
+            Err(msg) => return Ok(Outcome::Kept(msg)),
+        };
+        if !passes_gate(&single.2) {
             return Ok(Outcome::Kept(format!(
-                "kept {path}: loss cannot be measured: {error}"
+                "kept {path}: measured loss exceeds threshold"
             )));
         }
+        single
     };
-    if options.max_lsd.is_some_and(|limit| loss.lsd > limit)
-        || options
-            .min_snr
-            .is_some_and(|limit| loss.snr.is_none_or(|snr| snr < limit))
-    {
-        return Ok(Outcome::Kept(format!(
-            "kept {path}: measured loss exceeds threshold"
-        )));
-    }
     if !convert && !mono && options.cap.is_none() && output.len() >= entry.blob.len() {
         return Ok(Outcome::Kept(format!(
             "kept {path}: transcoded Ogg would not be smaller"

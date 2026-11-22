@@ -361,7 +361,14 @@ fn registry_exposes_the_lossless_model_passes_with_empty_options() {
     let passes = super::passes();
     assert_eq!(
         passes.iter().map(|p| p.name()).collect::<Vec<_>>(),
-        ["degenerate-faces", "identical-models", "shared-display"]
+        [
+            "degenerate-faces",
+            "identical-models",
+            "identity-rotations",
+            "model-defaults",
+            "shared-display",
+            "shared-elements",
+        ]
     );
     for pass in passes {
         assert_eq!(pass.stage(), Stage::Models);
@@ -371,6 +378,112 @@ fn registry_exposes_the_lossless_model_passes_with_empty_options() {
             schemars::json_schema!({"type": "object", "additionalProperties": false})
         );
     }
+}
+
+#[test]
+fn shared_elements_factors_repeated_geometry_and_proves_equivalence() {
+    let fx = Fixture::new();
+    let big_elements = r##""elements":[{"from":[0,0,0],"to":[16,16,16],"faces":{"north":{"uv":[0,0,16,16],"texture":"#a"},"south":{"uv":[0,0,16,16],"texture":"#a"},"east":{"uv":[0,0,16,16],"texture":"#a"},"west":{"uv":[0,0,16,16],"texture":"#a"}}}]"##;
+    fx.model(
+        "m1",
+        &format!(r#"{{"textures":{{"a":"fx:item/a"}},{big_elements}}}"#),
+    );
+    fx.model(
+        "m2",
+        &format!(r#"{{"textures":{{"a":"fx:item/b"}},{big_elements}}}"#),
+    );
+    fx.model(
+        "m3",
+        &format!(r#"{{"textures":{{"a":"fx:item/c"}},{big_elements}}}"#),
+    );
+    let out = fx.run(&super::shared_elements::SharedElements, &[]);
+    assert!(
+        out.state
+            .pack
+            .files
+            .keys()
+            .any(|p| p.as_str().starts_with("assets/packprune/models/e/")),
+        "expected shared elements parent model"
+    );
+    let m1 = std::str::from_utf8(bytes(&out, &path("m1"))).unwrap();
+    assert!(m1.contains("packprune:e/"), "{m1}");
+    assert!(!m1.contains("\"elements\""), "{m1}");
+    fx.prove(&super::shared_elements::SharedElements);
+}
+
+#[test]
+fn identity_rotations_strips_zero_angle_rotations_and_proves_equivalence() {
+    let fx = Fixture::new();
+    fx.model(
+        "rot",
+        r##"{"textures":{"a":"fx:item/a"},"elements":[{"from":[0,0,0],"to":[16,16,16],"rotation":{"angle":0,"axis":"y","origin":[8,8,8]},"faces":{"north":{"texture":"#a"}}}]}"##,
+    );
+    fx.model(
+        "euler_zero",
+        r##"{"textures":{"a":"fx:item/a"},"elements":[{"from":[0,0,0],"to":[16,16,16],"rotation":{"origin":[8,8,8],"x":0,"y":0,"z":0,"rescale":false},"faces":{"north":{"texture":"#a"}}}]}"##,
+    );
+    fx.model(
+        "euler_partial",
+        r##"{"textures":{"a":"fx:item/a"},"elements":[{"from":[0,0,0],"to":[16,16,16],"rotation":{"origin":[8,8,8],"x":22.5,"y":0,"z":0,"rescale":false},"faces":{"north":{"texture":"#a"}}}]}"##,
+    );
+    let out = fx.run(&super::identity_rotations::IdentityRotations, &[]);
+    let body = std::str::from_utf8(bytes(&out, &path("rot"))).unwrap();
+    assert!(!body.contains("rotation"), "{body}");
+    let ez = std::str::from_utf8(bytes(&out, &path("euler_zero"))).unwrap();
+    assert!(!ez.contains("rotation"), "{ez}");
+    let ep = std::str::from_utf8(bytes(&out, &path("euler_partial"))).unwrap();
+    assert!(ep.contains("\"x\":22.5"), "{ep}");
+    assert!(!ep.contains("\"y\""), "{ep}");
+    assert!(!ep.contains("\"z\""), "{ep}");
+    assert!(!ep.contains("\"rescale\""), "{ep}");
+    fx.prove(&super::identity_rotations::IdentityRotations);
+}
+
+#[test]
+fn model_defaults_strips_editor_keys_and_defaults_and_proves_equivalence() {
+    let fx = Fixture::new();
+    fx.model(
+        "defaults",
+        r##"{"textures":{"a":"fx:item/a"},"display":{"thirdperson_righthand":{"rotation":[0,0,0],"translation":[0,3,1],"scale":[1,1,1]},"thirdperson_lefthand":{"translation":[0,3,1]}},"elements":[{"name":"voxel","color":3,"shade":true,"light_emission":0,"from":[2,4,6],"to":[10,12,14],"faces":{"north":{"uv":[6,4,14,12],"texture":"#a","rotation":0,"tintindex":-1}}}]}"##,
+    );
+    fx.put(
+        "assets/fx/items/defaults.json",
+        r#"{"model":{"type":"minecraft:model","model":"fx:item/defaults","tints":[]}}"#,
+    );
+    let out = fx.run(&super::defaults::ModelDefaults, &[]);
+    let body = std::str::from_utf8(bytes(&out, &path("defaults"))).unwrap();
+    assert!(!body.contains("\"name\""), "{body}");
+    assert!(!body.contains("\"color\""), "{body}");
+    assert!(!body.contains("\"shade\""), "{body}");
+    assert!(!body.contains("\"light_emission\""), "{body}");
+    assert!(!body.contains("\"rotation\""), "{body}");
+    assert!(!body.contains("\"tintindex\""), "{body}");
+    assert!(!body.contains("\"uv\""), "{body}");
+    assert!(!body.contains("\"scale\""), "{body}");
+    assert!(!body.contains("thirdperson_lefthand"), "{body}");
+    let item = std::str::from_utf8(bytes(&out, "assets/fx/items/defaults.json")).unwrap();
+    assert!(!item.contains("\"tints\""), "{item}");
+    fx.prove(&super::defaults::ModelDefaults);
+}
+
+#[test]
+fn model_defaults_keeps_lefthand_on_parent_models_inherited_by_children() {
+    let fx = Fixture::new();
+    fx.model(
+        "parent_disp",
+        r##"{"textures":{"a":"fx:item/a"},"display":{"thirdperson_righthand":{"translation":[0,3,1]},"thirdperson_lefthand":{"translation":[0,3,1]}},"elements":[{"from":[0,0,0],"to":[16,16,16],"faces":{"north":{"texture":"#a"}}}]}"##,
+    );
+    fx.model(
+        "child_disp",
+        r##"{"parent":"fx:item/parent_disp","display":{"thirdperson_righthand":{"translation":[0,5,0]}}}"##,
+    );
+    let out = fx.run(&super::defaults::ModelDefaults, &[]);
+    let parent_body = std::str::from_utf8(bytes(&out, &path("parent_disp"))).unwrap();
+    assert!(
+        parent_body.contains("thirdperson_lefthand"),
+        "parent model must keep explicit lefthand so child overriding righthand stays unchanged: {parent_body}"
+    );
+    fx.prove(&super::defaults::ModelDefaults);
 }
 
 #[path = "shared_tests.rs"]
