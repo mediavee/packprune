@@ -300,43 +300,54 @@ fn compare_inner(
     }
 
     let differing_keys = differing.values().map(Vec::len).sum::<usize>();
-    let mut differences = Vec::new();
-    let mut located = 0;
+    let mut to_locate: Vec<(usize, String, String)> = Vec::new();
+    let mut overflow: Vec<Difference> = Vec::new();
     for (view, pairs) in differing {
-        let before_resolver = Resolver::new(&ctx, &before_side, view);
-        let after_resolver = Resolver::new(&ctx, &after_side, view);
         let id = ViewId(view as u32);
         for (from, to) in pairs {
+            if to_locate.len() < LOCATED {
+                to_locate.push((view, from, to));
+            } else {
+                let key = if from == to {
+                    from
+                } else {
+                    format!("{from} (now {to})")
+                };
+                overflow.push(Difference {
+                    view: id,
+                    key,
+                    detail: String::new(),
+                });
+            }
+        }
+    }
+    let located_diffs: Vec<Vec<Difference>> = to_locate
+        .into_par_iter()
+        .map(|(view, from, to)| {
+            let before_resolver = Resolver::new(&ctx, &before_side, view);
+            let after_resolver = Resolver::new(&ctx, &after_side, view);
+            let id = ViewId(view as u32);
             let key = if from == to {
                 from.clone()
             } else {
                 format!("{from} (now {to})")
             };
-            located += 1;
-            if located > LOCATED {
-                differences.push(Difference {
-                    view: id,
-                    key,
-                    detail: String::new(),
-                });
-                continue;
-            }
             match (before_resolver.resolve(&from), after_resolver.resolve(&to)) {
-                (Some(a), Some(b)) => {
-                    let lines = canon::diff(
-                        "",
-                        &a,
-                        &b,
-                        &|digest| before_resolver.model_of(digest),
-                        &|digest| after_resolver.model_of(digest),
-                    );
-                    differences.extend(lines.into_iter().map(|detail| Difference {
-                        view: id,
-                        key: key.clone(),
-                        detail,
-                    }));
-                }
-                (a, _) => differences.push(Difference {
+                (Some(a), Some(b)) => canon::diff(
+                    "",
+                    &a,
+                    &b,
+                    &|digest| before_resolver.model_of(digest),
+                    &|digest| after_resolver.model_of(digest),
+                )
+                .into_iter()
+                .map(|detail| Difference {
+                    view: id,
+                    key: key.clone(),
+                    detail,
+                })
+                .collect(),
+                (a, _) => vec![Difference {
                     view: id,
                     key,
                     detail: if a.is_none() {
@@ -345,10 +356,12 @@ fn compare_inner(
                         "only before"
                     }
                     .into(),
-                }),
+                }],
             }
-        }
-    }
+        })
+        .collect();
+    let mut differences: Vec<Difference> = located_diffs.into_iter().flatten().collect();
+    differences.extend(overflow);
     Comparison {
         differences,
         differing_keys: differing_keys as u32,
@@ -483,17 +496,40 @@ fn digests(
         per_view.into_iter().for_each(|view| keys.extend(view));
     }
     let keys: Vec<String> = keys.into_iter().collect();
+    let threads = rayon::current_num_threads().max(1);
+    let workers_per_view = (threads / views.max(1)).max(1);
+    let chunk_size = if workers_per_view <= 1 {
+        keys.len().max(1)
+    } else {
+        keys.len().div_ceil(workers_per_view).max(64)
+    };
     let values = (0..views)
         .into_par_iter()
         .map(|view| {
-            let resolver = Resolver::new(ctx, side, view);
-            keys.iter()
-                .map(|key| {
-                    resolver
-                        .resolve(key)
-                        .map(|descriptor| canon::digest(&descriptor))
-                })
-                .collect()
+            if chunk_size >= keys.len() {
+                let resolver = Resolver::new(ctx, side, view);
+                keys.iter()
+                    .map(|key| {
+                        resolver
+                            .resolve(key)
+                            .map(|descriptor| canon::digest(&descriptor))
+                    })
+                    .collect()
+            } else {
+                keys.par_chunks(chunk_size)
+                    .flat_map_iter(|chunk| {
+                        let resolver = Resolver::new(ctx, side, view);
+                        chunk
+                            .iter()
+                            .map(|key| {
+                                resolver
+                                    .resolve(key)
+                                    .map(|descriptor| canon::digest(&descriptor))
+                            })
+                            .collect::<Vec<_>>()
+                    })
+                    .collect()
+            }
         })
         .collect();
     ctx.shared.forget_parsed();

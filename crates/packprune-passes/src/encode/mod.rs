@@ -115,6 +115,7 @@ impl FileOptimizer for Png {
             keep_bit_depth: false,
             keep_grayscale: cx.quirks.imageio_grey,
             imageio: cx.quirks.imageio_textures,
+            optimize_alpha: false,
         };
         Ok(smaller(input, png::optimise(input, &options)))
     }
@@ -160,15 +161,10 @@ impl FileOptimizer for Audio {
         options: &toml::Table,
     ) -> Result<Option<Optimised>, PassError> {
         let options = options_of::<AudioOptions>(self, options)?;
-        if options.empty_audio
-            && let Some(silent) = smaller(input, audio::optimise_empty(input))
-        {
-            return Ok(Some(silent));
-        }
-        if !options.optimize_ogg {
-            return Ok(None);
-        }
-        Ok(smaller(input, audio::optimise(input)))
+        Ok(smaller(
+            input,
+            audio::optimise_with_options(input, options.empty_audio, options.optimize_ogg),
+        ))
     }
 }
 

@@ -26,7 +26,7 @@ use crate::resolver::{Ctx, Resolver, Side};
 
 /// Digests kept per key and environment: one per side of a run (pruned, proved, written).
 const CANDIDATES: usize = 4;
-const MAGIC: &[u8; 8] = b"PPOMEMO1";
+const MAGIC: &[u8; 8] = b"PPOMEMO2";
 
 /// One question a resolution asks its view.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -286,6 +286,10 @@ pub struct Memo {
     tables: RwLock<Tables>,
     hits: AtomicU64,
     misses: AtomicU64,
+    /// Loaded from disk on start; when true and no new entries were recorded and all loaded entries were used,
+    /// [`Self::to_bytes_if_changed`] skips redundant serialization and disk writes.
+    loaded: bool,
+    mutated: AtomicBool,
     /// Keys on the files a resolution read only, a design tests show reuses wrong digests.
     #[cfg(test)]
     files_read: bool,
@@ -302,14 +306,16 @@ impl Default for Memo {
 
 impl Memo {
     pub fn new() -> Self {
-        Self::with_tables(Tables::default())
+        Self::with_tables(Tables::default(), false)
     }
 
-    fn with_tables(tables: Tables) -> Self {
+    fn with_tables(tables: Tables, loaded: bool) -> Self {
         Self {
             tables: RwLock::new(tables),
             hits: AtomicU64::new(0),
             misses: AtomicU64::new(0),
+            loaded,
+            mutated: AtomicBool::new(false),
             #[cfg(test)]
             files_read: false,
             #[cfg(test)]
@@ -501,39 +507,56 @@ impl Memo {
         if missed.is_empty() {
             return values;
         }
-        let recorder = Recorder::default();
-        let resolver = Resolver::recording(ctx, side, view, &recorder);
-        let mut numbering = Numbering::default();
-        let mut recorded = Vec::new();
-        for index in missed {
-            recorder.begin();
-            let digest = resolver
-                .resolve(&keys[index])
-                .map(|descriptor| canon::digest(&descriptor));
-            let trace = recorder.end();
-            values[index] = digest;
-            if let Some(node) = numbering.add(&trace) {
-                recorded.push((index, node));
-            }
-        }
-        drop(resolver);
-        let nodes = numbering.seal(recorder);
+        let views = side.views.len().max(1);
+        let threads = rayon::current_num_threads().max(1);
+        let workers_per_view = (threads / views).max(1);
+        let chunk_size = if workers_per_view <= 1 {
+            missed.len().max(1)
+        } else {
+            missed.len().div_ceil(workers_per_view).max(64)
+        };
+        let chunks: Vec<_> = missed
+            .par_chunks(chunk_size)
+            .map(|chunk| {
+                let recorder = Recorder::default();
+                let resolver = Resolver::recording(ctx, side, view, &recorder);
+                let mut numbering = Numbering::default();
+                let mut results = Vec::with_capacity(chunk.len());
+                for &index in chunk {
+                    recorder.begin();
+                    let digest = resolver
+                        .resolve(&keys[index])
+                        .map(|descriptor| canon::digest(&descriptor));
+                    let trace = recorder.end();
+                    let node = numbering.add(&trace);
+                    results.push((index, digest, node));
+                }
+                drop(resolver);
+                let nodes = numbering.seal(recorder);
+                (results, nodes)
+            })
+            .collect();
         let mut tables = self.write();
-        let ids = tables.merge(&nodes);
-        for (index, local) in recorded {
-            let slot = (env, tables.key(&keys[index]));
-            let candidates = tables.entries.entry(slot).or_default();
-            let (node, digest) = (ids[local as usize], values[index]);
-            candidates.retain(|c| c.node != node || c.digest != digest);
-            candidates.insert(
-                0,
-                Candidate {
-                    node,
-                    digest,
-                    used: AtomicBool::new(true),
-                },
-            );
-            bound(candidates, |c| c.used.load(Ordering::Relaxed));
+        for (results, nodes) in chunks {
+            let ids = tables.merge(&nodes);
+            for (index, digest, local) in results {
+                values[index] = digest;
+                if let Some(local) = local {
+                    let slot = (env, tables.key(&keys[index]));
+                    let candidates = tables.entries.entry(slot).or_default();
+                    let node = ids[local as usize];
+                    candidates.retain(|c| c.node != node || c.digest != digest);
+                    candidates.insert(
+                        0,
+                        Candidate {
+                            node,
+                            digest,
+                            used: AtomicBool::new(true),
+                        },
+                    );
+                    bound(candidates, |c| c.used.load(Ordering::Relaxed));
+                }
+            }
         }
         values
     }
@@ -564,6 +587,7 @@ impl Memo {
     }
 
     fn write(&self) -> RwLockWriteGuard<'_, Tables> {
+        self.mutated.store(true, Ordering::Relaxed);
         self.tables.write().unwrap_or_else(PoisonError::into_inner)
     }
 
@@ -682,6 +706,28 @@ impl<'a> Check<'a> {
 
 /// Serialisation: what this process used or recorded, with the nodes and facts they reach, renumbered.
 impl Memo {
+    /// Like [`Self::to_bytes`], but returns `None` when the memo was loaded from disk, no new entries were recorded,
+    /// and every loaded candidate and key set was reused (so the bytes on disk are already identical).
+    pub fn to_bytes_if_changed(&self) -> Option<Vec<u8>> {
+        if self.loaded && !self.mutated.load(Ordering::Relaxed) {
+            let tables = self.read();
+            let all_used = tables
+                .entries
+                .values()
+                .flatten()
+                .all(|c| c.used.load(Ordering::Relaxed))
+                && tables
+                    .key_sets
+                    .values()
+                    .flatten()
+                    .all(|s| s.used.load(Ordering::Relaxed));
+            if all_used {
+                return None;
+            }
+        }
+        Some(self.to_bytes())
+    }
+
     /// The memo as bytes for the next run: only what this process used or recorded.
     pub fn to_bytes(&self) -> Vec<u8> {
         let tables = self.read();
@@ -874,7 +920,7 @@ impl Memo {
                 used: AtomicBool::new(false),
             });
         }
-        (input.at == bytes.len()).then(|| Self::with_tables(tables))
+        (input.at == bytes.len()).then(|| Self::with_tables(tables, true))
     }
 }
 

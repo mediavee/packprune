@@ -1,12 +1,13 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use packprune_pack::{VanillaIndex, json};
+use rayon::prelude::*;
 use serde::Serialize;
 
 use super::Exclusions;
 use super::read::{Failure, Json, Key, Res};
 use super::stack::{CLIENT_FILE, Found, Matcher, Stack};
-use super::stitch::{Item, mip_chain_bytes, stitch};
+use super::stitch::{Item, mip_chain_bytes, stitch, stitch_with_aniso};
 
 /// The client's `maxTextureSize` for an atlas.
 pub const MAX_TEXTURE_SIZE: i64 = 16384;
@@ -42,6 +43,12 @@ pub struct AtlasCost {
     pub height: i64,
     /// The texture's RGBA bytes over all its mip levels.
     pub gpu: u64,
+    /// Worst-case GPU bytes with 16x anisotropic filtering enabled (`aniso_shift = 4`).
+    pub aniso_gpu: u64,
+    /// Extra GPU bytes allocated by `SpriteContents.createAnimationState` for animated frames (mip levels included).
+    pub animation_gpu: u64,
+    /// Estimated peak GPU bytes during `TextureAtlas.uploadInitialContents` (`gpu + decoded`).
+    pub reload_peak_gpu: u64,
     pub decoded: u64,
     /// By frame area, what the stitched texture holds.
     pub largest: Vec<SpriteRow>,
@@ -179,13 +186,25 @@ impl<'a, 'e> Atlases<'a, 'e> {
                 continue;
             };
             let mip = stitched.mip_level;
+            let gpu = stitched.gpu_bytes();
+            let aniso_gpu = stitch_with_aniso(&items, mipmaps, MAX_TEXTURE_SIZE, 4)
+                .map_or(gpu, |s| s.gpu_bytes());
+            let decoded: u64 = sprites.iter().map(|sprite| sprite.decoded(mip)).sum();
+            let animation_gpu: u64 = sprites
+                .iter()
+                .filter(|s| s.image_width > s.width || s.image_height > s.height)
+                .map(|s| s.decoded(mip))
+                .sum();
             atlases.push(AtlasCost {
                 sprites: sprites.len(),
                 pack_sprites: sprites.iter().filter(|sprite| sprite.pack).count(),
                 width: stitched.width,
                 height: stitched.height,
-                gpu: stitched.gpu_bytes(),
-                decoded: sprites.iter().map(|sprite| sprite.decoded(mip)).sum(),
+                gpu,
+                aniso_gpu,
+                animation_gpu,
+                reload_peak_gpu: gpu.saturating_add(decoded),
+                decoded,
                 largest: largest(&sprites, |s| (s.width * s.height) as u64, mip),
                 largest_decoded: largest(&sprites, |s| s.decoded(mip), mip),
                 mip_level: mip,
@@ -207,6 +226,59 @@ impl<'a, 'e> Atlases<'a, 'e> {
             let root = Json::new(file, definition, &root);
             for source in root.object()?.field("sources")?.array()? {
                 self.run(&source, &mut pending)?;
+            }
+        }
+        // Pre-decode all referenced pack PNGs in parallel so `load` only does BTreeMap lookups.
+        let mut needed: BTreeSet<&str> = BTreeSet::new();
+        for loader in pending.values() {
+            match loader {
+                Loader::Sprite { path } | Loader::Region { path, .. } => {
+                    if !self.textures.contains_key(path.as_str()) {
+                        needed.insert(path.as_str());
+                    }
+                }
+                Loader::Permutation {
+                    base, keys, values, ..
+                } => {
+                    for p in [base, keys, values] {
+                        if !self.textures.contains_key(p.as_str()) {
+                            needed.insert(p.as_str());
+                        }
+                    }
+                }
+            }
+        }
+        let to_decode: Vec<(&str, &str, &[u8])> = needed
+            .into_iter()
+            .filter_map(|path| match self.stack.find(path) {
+                Some(Found::Pack { file, entry }) => Some((path, file, &entry.blob[..])),
+                _ => None,
+            })
+            .collect();
+        let decoded: Vec<(&str, Result<Texture, String>)> = to_decode
+            .into_par_iter()
+            .map(|(path, file, blob)| {
+                let res = match packprune_codec::png::decode(blob) {
+                    Ok(image) => Ok(Texture {
+                        width: i64::from(image.width),
+                        height: i64::from(image.height),
+                        from_client: false,
+                        file: file.to_owned(),
+                    }),
+                    Err(e) => Err(format!("{file} > {path}: unreadable PNG: {e}")),
+                };
+                (path, res)
+            })
+            .collect();
+        for (path, res) in decoded {
+            match res {
+                Ok(texture) => {
+                    self.textures.insert(path.to_owned(), Some(texture));
+                }
+                Err(why) => {
+                    self.exclusions.add(why);
+                    self.textures.insert(path.to_owned(), None);
+                }
             }
         }
         let mut sprites = vec![Sprite {

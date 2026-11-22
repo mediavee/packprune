@@ -483,17 +483,19 @@ fn run(request: &Request, seams: &Seams<'_>, progress: &Progress) -> Result<Summ
             &selection.optimisers,
             &overrides,
             &origins,
+            &zip.compress,
             &cache,
             seams.quirks,
         )
     })?;
     progress.reach(Step::Write);
     let staged = timed("write", || {
-        encode::stage(&stage.pack, &layout, &request.output, &zip, &cache)
+        encode::stage_encoded(&stage.encoded, &request.output, &zip)
     })?;
     let optimisers::Stage {
         pack: optimised,
         lossless: only_lossless,
+        encoded: _,
         reports: optimiser_reports,
         loss: optimiser_loss,
     } = stage;
@@ -722,7 +724,7 @@ fn prove_zip(
         None => None,
     };
     // No oracle runs after these: the memo is saved as it is now, once the run is published.
-    let memo = memo.map(|memo| timed("oracle memo (save)", || memo.to_bytes()));
+    let memo = memo.and_then(|memo| timed("oracle memo (save)", || memo.to_bytes_if_changed()));
     Ok(ZipProofs {
         on_zip,
         zip_loss,

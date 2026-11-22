@@ -6,11 +6,9 @@ use std::sync::Arc;
 
 use camino::{Utf8Path, Utf8PathBuf};
 use packprune_config::Profile;
-use packprune_pack::{FileKind, Layout, PackInput};
 use packprune_zip::{
     CompressOptions, DEFAULT_EFFORT, Encoded, EntryClass, LayoutOptions, Written, ZipMode,
 };
-use rayon::prelude::*;
 
 use super::RunError;
 use super::cache::Cache;
@@ -68,12 +66,10 @@ impl Staged {
     }
 }
 
-pub(crate) fn stage(
-    pack: &PackInput,
-    layout: &Layout,
+pub(crate) fn stage_encoded(
+    entries: &BTreeMap<String, Encoded>,
     output: &Utf8Path,
     options: &ZipOptions,
-    cache: &Cache,
 ) -> Result<Staged, RunError> {
     let parent = match output.parent() {
         Some(parent) if !parent.as_str().is_empty() => parent,
@@ -85,18 +81,8 @@ pub(crate) fn stage(
     let path = Utf8Path::from_path(dir.path())
         .ok_or_else(|| RunError::Refused(format!("{parent}: not a UTF-8 path")))?
         .join("output.zip");
-    let entries: BTreeMap<String, Encoded> = pack
-        .files
-        .par_iter()
-        .map(|(path, entry)| {
-            let kind = layout.kinds.get(path).copied().unwrap_or(FileKind::Unknown);
-            let class = kind.entry_class(path);
-            let encoded = encode(&entry.blob, entry.digest.0, class, &options.compress, cache);
-            (path.as_str().to_owned(), encoded)
-        })
-        .collect();
     let written =
-        packprune_zip::assemble(&entries, &path, &options.layout).map_err(|error| match error {
+        packprune_zip::assemble(entries, &path, &options.layout).map_err(|error| match error {
             packprune_zip::ZipError::Refused { entry, why } => {
                 RunError::Refused(format!("{entry}: {why}"))
             }
@@ -109,7 +95,7 @@ pub(crate) fn stage(
     })
 }
 
-fn encode(
+pub(crate) fn encode_entry(
     bytes: &[u8],
     digest: [u8; 32],
     class: EntryClass,

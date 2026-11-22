@@ -277,6 +277,9 @@ fn cost(gpu: u64, font: u64, exclusions: &[&str]) -> Cost {
             width: 16,
             height: 16,
             gpu,
+            aniso_gpu: gpu,
+            animation_gpu: 0,
+            reload_peak_gpu: gpu.saturating_mul(2),
             decoded: gpu,
             largest: Vec::new(),
             largest_decoded: Vec::new(),
@@ -294,6 +297,7 @@ fn cost(gpu: u64, font: u64, exclusions: &[&str]) -> Cost {
             provider_types: Default::default(),
         }],
         duplicates: Vec::new(),
+        sounds: Default::default(),
         exclusions: exclusions.iter().map(|text| (*text).into()).collect(),
     }
 }

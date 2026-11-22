@@ -128,12 +128,18 @@ pub struct RunCost<C = Cost> {
 pub struct CostLine {
     atlases: Vec<Atlas>,
     fonts: Vec<Font>,
+    #[serde(default)]
+    sounds: SoundLine,
     exclusions: Vec<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
 struct Atlas {
     gpu: u64,
+    #[serde(default)]
+    aniso_gpu: u64,
+    #[serde(default)]
+    animation_gpu: u64,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
@@ -141,10 +147,19 @@ struct Font {
     total: u64,
 }
 
+#[derive(Clone, Debug, Default, PartialEq, Eq, Deserialize)]
+struct SoundLine {
+    #[serde(default)]
+    pcm_bytes: u64,
+}
+
 /// The figures of a view's memory that `report.md` shows.
 pub trait Figures {
     fn atlas_gpu_bytes(&self) -> u64;
+    fn atlas_aniso_gpu_bytes(&self) -> u64;
+    fn animation_gpu_bytes(&self) -> u64;
     fn font_bytes(&self) -> u64;
+    fn sound_pcm_bytes(&self) -> u64;
     /// What the model leaves out; empty when it is complete.
     fn exclusions(&self) -> &[String];
 }
@@ -154,8 +169,20 @@ impl Figures for Cost {
         Cost::atlas_gpu_bytes(self)
     }
 
+    fn atlas_aniso_gpu_bytes(&self) -> u64 {
+        Cost::aniso_atlas_gpu_bytes(self)
+    }
+
+    fn animation_gpu_bytes(&self) -> u64 {
+        Cost::animation_gpu_bytes(self)
+    }
+
     fn font_bytes(&self) -> u64 {
         Cost::font_bytes(self)
+    }
+
+    fn sound_pcm_bytes(&self) -> u64 {
+        Cost::sounds_pcm_bytes(self)
     }
 
     fn exclusions(&self) -> &[String] {
@@ -168,8 +195,20 @@ impl Figures for CostLine {
         self.atlases.iter().map(|atlas| atlas.gpu).sum()
     }
 
+    fn atlas_aniso_gpu_bytes(&self) -> u64 {
+        self.atlases.iter().map(|atlas| atlas.aniso_gpu).sum()
+    }
+
+    fn animation_gpu_bytes(&self) -> u64 {
+        self.atlases.iter().map(|atlas| atlas.animation_gpu).sum()
+    }
+
     fn font_bytes(&self) -> u64 {
         self.fonts.iter().map(|font| font.total).sum()
+    }
+
+    fn sound_pcm_bytes(&self) -> u64 {
+        self.sounds.pcm_bytes
     }
 
     fn exclusions(&self) -> &[String] {

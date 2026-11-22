@@ -81,4 +81,6 @@ dbg_macro = "warn"
 todo = "warn"
 
 [profile.release]
+lto = "fat"
+codegen-units = 1
 panic = "unwind"

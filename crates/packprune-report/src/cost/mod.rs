@@ -11,6 +11,7 @@ use serde::Serialize;
 mod atlases;
 mod fonts;
 mod read;
+mod sounds;
 mod stack;
 mod stitch;
 #[cfg(test)]
@@ -18,6 +19,7 @@ mod tests;
 
 pub use atlases::{AtlasCost, MAX_TEXTURE_SIZE, SpriteRow};
 pub use fonts::{Duplicate, FontCost, PAGE_BYTES};
+pub use sounds::SoundCost;
 
 /// The first format whose client keeps a staging copy of each uploaded font sheet (26.2).
 const STAGING_COPY_FORMAT: Format = (88, 0);
@@ -43,6 +45,7 @@ pub struct Cost {
     pub atlases: Vec<AtlasCost>,
     pub fonts: Vec<FontCost>,
     pub duplicates: Vec<Duplicate>,
+    pub sounds: SoundCost,
     pub exclusions: Vec<String>,
 }
 
@@ -57,6 +60,16 @@ impl Cost {
         self.atlases.iter().map(|atlas| atlas.gpu).sum()
     }
 
+    /// Worst-case GPU bytes of every atlas with 16x anisotropic filtering enabled.
+    pub fn aniso_atlas_gpu_bytes(&self) -> u64 {
+        self.atlases.iter().map(|atlas| atlas.aniso_gpu).sum()
+    }
+
+    /// Extra GPU bytes for animated sprite frame textures across all atlases.
+    pub fn animation_gpu_bytes(&self) -> u64 {
+        self.atlases.iter().map(|atlas| atlas.animation_gpu).sum()
+    }
+
     pub fn atlas_decoded_bytes(&self) -> u64 {
         self.atlases.iter().map(|atlas| atlas.decoded).sum()
     }
@@ -64,6 +77,11 @@ impl Cost {
     /// Client bytes of every font: sheets decoded, staging copies and glyph pages (`Measured::font_bytes`).
     pub fn font_bytes(&self) -> u64 {
         self.fonts.iter().map(|font| font.total).sum()
+    }
+
+    /// OpenAL 16-bit PCM RAM held by non-streamed pack sounds.
+    pub fn sounds_pcm_bytes(&self) -> u64 {
+        self.sounds.pcm_bytes
     }
 
     /// Bytes decoded again because several providers load the same sheet.
@@ -115,12 +133,14 @@ impl Calculator<'_> {
         )
         .read()
         .map_err(invalid)?;
+        let sounds = sounds::audit(&stack);
         Ok(Cost {
             view: view.name.clone(),
             format,
             atlases,
             fonts: fonts.fonts,
             duplicates: fonts.duplicates,
+            sounds,
             exclusions: exclusions.0,
         })
     }
